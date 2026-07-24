@@ -34,7 +34,7 @@ export default function CompleteProfile() {
     }
 
     load()
-  }, [])
+  }, [navigate])
 
   async function finish() {
     if (!username.trim()) {
@@ -73,7 +73,7 @@ export default function CompleteProfile() {
       return
     }
 
-    navigate("/")
+    window.location.href = "/"
   }
 
   if (!user) return null

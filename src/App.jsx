@@ -33,13 +33,19 @@ export default function App() {
     return
   }
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle()
+  const { data, error } = await supabase
+  .from("profiles")
+  .select("id")
+  .eq("id", user.id)
+  .maybeSingle()
 
-  setProfileExists(!!data)
+if (error) {
+  console.error(error)
+  setProfileExists(false)
+  return
+}
+
+setProfileExists(!!data)
 }
 
   useEffect(() => {
@@ -47,7 +53,7 @@ export default function App() {
       const currentUser = data.session?.user || null
 
 setUser(currentUser)
-await checkProfile(currentUser)
+checkProfile(currentUser)
       setLoading(false)
       setTimeout(() => {
         setShowLoader(false)
@@ -85,7 +91,9 @@ checkProfile(currentUser)
         path="/*"
         element={
           user ? (
-  profileExists ? (
+  profileExists === null ? (
+    <LoadingScreen />
+  ) : profileExists ? (
     <Layout user={user} logout={logout}>
       <Routes>
         <Route path="/" element={<Feed />} />
