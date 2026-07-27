@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { useEffect, useState } from "react"
 import { supabase } from "../supabase"
 import CommentSection from "./CommentSection"
@@ -8,6 +8,7 @@ export default function PostCard({ post, deletePost, user }) {
   const [liked, setLiked] = useState(false)
   const [likes, setLikes] = useState(0)
   const [showComments, setShowComments] = useState(false)
+  const [openedSections, setOpenedSections] = useState({})
 
   useEffect(() => {
     fetchLikes()
@@ -212,10 +213,65 @@ export default function PostCard({ post, deletePost, user }) {
           </div>
         </div>
       </div>
+      <div className="relative z-10">
 
-      <p className="relative z-10 whitespace-pre-wrap text-[18px] leading-9 text-slate-100 tracking-wide">
-        {post.content}
-      </p>
+  <h2 className="text-3xl font-black mb-6">
+    {post.title}
+  </h2>
+
+  {(post.post_sections || [])
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((section, index) => (
+      <div
+        key={section.id}
+        className="mb-4 rounded-2xl border border-white/10 overflow-hidden"
+      >
+        <button
+          onClick={() =>
+            setOpenedSections((prev) => ({
+              ...prev,
+              [section.id]: !prev[section.id],
+            }))
+          }
+          className="
+            w-full
+            flex
+            items-center
+            justify-between
+            px-6
+            py-4
+            bg-white/5
+            hover:bg-white/10
+            transition
+          "
+        >
+          <span className="font-bold text-lg">
+            {section.title || `Section ${index + 1}`}
+          </span>
+
+          <span>
+            {openedSections[section.id] ? "▲" : "▼"}
+          </span>
+        </button>
+
+        <AnimatePresence>
+          {openedSections[section.id] && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden"
+            >
+              <div className="px-6 py-5 whitespace-pre-wrap text-slate-300">
+                {section.content}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    ))}
+</div>
       <div className="relative z-10 mt-7 flex gap-3 border-t border-white/10 pt-5">
 
       <button

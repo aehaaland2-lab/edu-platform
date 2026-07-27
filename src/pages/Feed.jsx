@@ -6,21 +6,34 @@ import { motion, AnimatePresence } from "framer-motion"
 export default function Feed() {
   const [profile, setProfile] = useState(null)
   const [posts, setPosts] = useState([])
-  const [text, setText] = useState("")
+  const [title, setTitle] = useState("")
+
+  const [sections, setSections] = useState([
+    {
+      title: "",
+      content: "",
+    },
+  ])
   const [user, setUser] = useState(null)
 
   async function fetchPosts() {
     const { data } = await supabase
       .from("posts")
       .select(`
-        *,
-        profiles (
-          username,
-          avatar_url,
-          role,
-          xp
-        )
-      `)
+  *,
+  profiles (
+    username,
+    avatar_url,
+    role,
+    xp
+  ),
+  post_sections (
+    id,
+    title,
+    content,
+    order_index
+  )
+`)
       .order("created_at", { ascending: false })
 
     setPosts(data || [])
@@ -50,24 +63,59 @@ export default function Feed() {
   }
 
   async function addPost() {
-    if (!text.trim()) return
+    if (!title.trim()) return
+
+const validSections = sections.filter(
+  (section) =>
+    section.title.trim() || section.content.trim()
+)
+
+if (validSections.length === 0) return
 
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
-    const { error } = await supabase.from("posts").insert({
-      content: text,
-      user_email: user.email,
-      user_id: user.id,
-    })
+    const { data: post, error } = await supabase
+  .from("posts")
+  .insert({
+    title,
+    content: "",
+    user_email: user.email,
+    user_id: user.id,
+  })
+  .select()
+  .single()
 
-    if (error) {
-      console.error(error)
-      return
-    }
+if (error) {
+  console.error(error)
+  return
+}
 
-    setText("")
+const { error: sectionsError } = await supabase
+  .from("post_sections")
+  .insert(
+    validSections.map((section, index) => ({
+      post_id: post.id,
+      title: section.title,
+      content: section.content,
+      order_index: index,
+    }))
+  )
+
+if (sectionsError) {
+  console.error(sectionsError)
+  return
+}
+
+    setTitle("")
+
+setSections([
+  {
+    title: "",
+    content: "",
+  },
+])
     fetchPosts()
   }
 
@@ -173,34 +221,104 @@ export default function Feed() {
           </div>
         </div>
 
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Share something..."
-          maxLength={300}
-          rows={5}
-          className="
-            w-full
-            rounded-3xl
-            border
-            border-white/10
-            bg-[#0F1117]
-            px-6
-            py-5
-            text-lg
-            outline-none
-            transition-all
-            duration-300
-            focus:border-yellow-400
-          "
-        />
+        <input
+  value={title}
+  onChange={(e) => setTitle(e.target.value)}
+  placeholder="Post title..."
+  className="
+    w-full
+    rounded-2xl
+    border
+    border-white/10
+    bg-[#0F1117]
+    px-6
+    py-4
+    mb-6
+    text-2xl
+    font-bold
+    outline-none
+    focus:border-yellow-400
+  "
+/>
 
-        <div className="mt-3 flex justify-end text-sm text-slate-500">
-          {text.length}/300
-        </div>
+<div className="space-y-6">
+  {sections.map((section, index) => (
+    <div
+      key={index}
+      className="
+        rounded-3xl
+        border
+        border-white/10
+        bg-[#0F1117]
+        p-6
+      "
+    >
+      <input
+        value={section.title}
+        onChange={(e) => {
+          const copy = [...sections]
+          copy[index].title = e.target.value
+          setSections(copy)
+        }}
+        placeholder={`Section ${index + 1} title`}
+        className="
+          w-full
+          bg-transparent
+          text-xl
+          font-bold
+          outline-none
+          mb-4
+        "
+      />
+
+      <textarea
+        value={section.content}
+        onChange={(e) => {
+          const copy = [...sections]
+          copy[index].content = e.target.value
+          setSections(copy)
+        }}
+        rows={5}
+        placeholder="Write section..."
+        className="
+          w-full
+          resize-none
+          bg-transparent
+          outline-none
+          text-slate-300
+        "
+      />
+    </div>
+  ))}
+</div>
+
+<button
+  onClick={() =>
+    setSections([
+      ...sections,
+      {
+        title: "",
+        content: "",
+      },
+    ])
+  }
+  className="
+    mt-6
+    rounded-xl
+    border
+    border-yellow-500/30
+    px-5
+    py-3
+    text-yellow-400
+    transition
+    hover:bg-yellow-500/10
+  "
+>
+  + Add section
+</button>
 
         <motion.button
-          disabled={!text.trim()}
+          disabled={!title.trim()}
           whileHover={{ y: -2 }}
           whileTap={{ y: 1 }}
           onClick={addPost}

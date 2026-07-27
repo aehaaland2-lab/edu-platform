@@ -1,0 +1,41 @@
+Ñòğóêòóğà ïàïîê
+Ñåğèéíûé íîìåğ òîìà: 00000254 5AFF:FDB7
+D:\WEBDEV\PROJECTS\EDU-PLATFORM\SRC
+¦   App.css
+¦   App.jsx
+¦   index.css
+¦   main.jsx
+¦   supabase.js
+¦   
++---assets
+¦       hero.png
+¦       react.svg
+¦       vite.svg
+¦       
++---components
+¦   ¦   CommentSection.jsx
+¦   ¦   Layout.jsx
+¦   ¦   LoadingScreen.jsx
+¦   ¦   PostCard.jsx
+¦   ¦   ProfileCard.jsx
+¦   ¦   
+¦   L---tests
+¦           Breadcrumbs.jsx
+¦           FolderCard.jsx
+¦           FolderMenu.jsx
+¦           FolderModal.jsx
+¦           QuestionModal.jsx
+¦           TestCard.jsx
+¦           TestModal.jsx
+¦           
++---pages
+¦       Auth.jsx
+¦       CompleteProfile.jsx
+¦       EditProfile.jsx
+¦       Feed.jsx
+¦       PlayTest.jsx
+¦       Profile.jsx
+¦       TestEditor.jsx
+¦       Tests.jsx
+¦       
+L---services
