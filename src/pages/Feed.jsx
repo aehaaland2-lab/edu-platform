@@ -192,17 +192,25 @@ setSections([
 
       <div
         className="
+          relative
           mb-8
+          overflow-hidden
           rounded-[32px]
           border
           border-slate-200
-          bg-white
+          bg-gradient-to-br
+          from-white
+          via-white
+          to-amber-50/70
           p-6
           md:p-8
           shadow-[0_16px_50px_rgba(15,23,42,.07)]
         "
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-yellow-200/35 blur-[80px]" />
+        <div className="pointer-events-none absolute -bottom-28 -left-20 h-56 w-56 rounded-full bg-sky-100/50 blur-[80px]" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-yellow-600 font-bold">
               Community
@@ -280,9 +288,22 @@ setSections([
         className="
           w-full
           resize-none
-          bg-transparent
+          rounded-xl
+          border
+          border-slate-200
+          bg-slate-50
+          px-4
+          py-3
           outline-none
-          text-slate-300
+          text-[15px]
+          leading-7
+          text-slate-700
+          placeholder:text-slate-400
+          transition
+          focus:border-yellow-300
+          focus:bg-white
+          focus:ring-4
+          focus:ring-yellow-100
         "
       />
     </div>
@@ -303,12 +324,15 @@ setSections([
     mt-6
     rounded-xl
     border
-    border-yellow-500/30
+    border-yellow-300
+    bg-yellow-50
     px-5
     py-3
-    text-yellow-400
+    font-semibold
+    text-yellow-700
     transition
-    hover:bg-yellow-500/10
+    hover:-translate-y-0.5
+    hover:bg-yellow-100
   "
 >
   + Add section
@@ -323,12 +347,12 @@ setSections([
             mt-6
             rounded-2xl
             bg-gradient-to-r
-            from-yellow-500
+            from-yellow-400
             to-amber-400
             px-10
             py-3.5
             font-bold
-            text-black
+            text-amber-950
             transition-all
             duration-300
             disabled:opacity-40
