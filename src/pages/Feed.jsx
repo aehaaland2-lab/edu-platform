@@ -148,75 +148,72 @@ setSections([
         className="
           relative
           overflow-hidden
-          rounded-[36px]
+          rounded-[32px]
           border
-          border-white/10
-          bg-gradient-to-br
-          from-[#171A22]
-          via-[#12141B]
-          to-[#0B0C10]
-          p-10
-          mb-10
-          shadow-[0_40px_120px_rgba(0,0,0,.45)]
+          border-slate-200
+          bg-white
+          p-8
+          md:p-10
+          mb-8
+          shadow-[0_20px_60px_rgba(15,23,42,.08)]
         "
       >
-        <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-yellow-400/10 blur-[120px]" />
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-yellow-300/25 blur-[90px]" />
 
-        <p className="text-yellow-400 uppercase tracking-[0.35em] text-sm">
+        <p className="text-yellow-600 uppercase tracking-[0.28em] text-sm font-bold">
           Welcome Back
         </p>
 
-        <h1 className="mt-3 text-6xl font-black">
+        <h1 className="mt-2 text-4xl md:text-5xl font-black tracking-tight text-slate-950">
           {profile?.username || user?.email}
         </h1>
 
-        <p className="mt-3 text-slate-400 text-lg">
+        <p className="mt-2 max-w-2xl text-base md:text-lg leading-7 text-slate-500">
           Inspire students. Share knowledge. Build the future.
         </p>
 
-        <div className="mt-8 flex gap-5">
-          <div className="rounded-2xl bg-white/5 px-6 py-5">
-            <p className="text-slate-400 text-sm">Posts</p>
-            <h2 className="text-3xl font-black">{posts.length}</h2>
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <p className="text-slate-500 text-sm font-medium">Posts</p>
+            <h2 className="mt-1 text-3xl font-black text-slate-950">{posts.length}</h2>
           </div>
 
-          <div className="rounded-2xl bg-white/5 px-6 py-5">
-            <p className="text-slate-400 text-sm">Level</p>
-            <h2 className="text-3xl font-black">1</h2>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <p className="text-slate-500 text-sm font-medium">Level</p>
+            <h2 className="mt-1 text-3xl font-black text-slate-950">1</h2>
           </div>
 
-          <div className="rounded-2xl bg-white/5 px-6 py-5">
-            <p className="text-slate-400 text-sm">XP</p>
-            <h2 className="text-3xl font-black">0</h2>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <p className="text-slate-500 text-sm font-medium">XP</p>
+            <h2 className="mt-1 text-3xl font-black text-slate-950">0</h2>
           </div>
         </div>
       </motion.div>
 
       <div
         className="
-          mb-10
-          rounded-[34px]
+          mb-8
+          rounded-[32px]
           border
-          border-white/10
-          bg-gradient-to-br
-          from-[#16181F]
-          to-[#0D0F13]
-          p-8
-          shadow-[0_30px_90px_rgba(0,0,0,.55)]
+          border-slate-200
+          bg-white
+          p-6
+          md:p-8
+          shadow-[0_16px_50px_rgba(15,23,42,.07)]
         "
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+            <p className="text-xs uppercase tracking-[0.28em] text-yellow-600 font-bold">
               Community
             </p>
 
-            <h2 className="mt-2 text-3xl font-black">
+            <h2 className="mt-2 text-2xl md:text-3xl font-black tracking-tight text-slate-950">
               Create a new post
             </h2>
           </div>
 
-          <div className="rounded-xl bg-yellow-500/10 px-4 py-2 text-yellow-400">
+          <div className="rounded-full border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-700">
             Public
           </div>
         </div>
@@ -241,7 +238,7 @@ setSections([
   "
 />
 
-<div className="space-y-6">
+<div className="mt-5 space-y-4">
   {sections.map((section, index) => (
     <div
       key={index}
@@ -342,7 +339,7 @@ setSections([
         </motion.button>
       </div>
 
-      <motion.div layout className="space-y-6 pb-20">
+      <motion.div layout className="mt-5 space-y-4 pb-20">
         <AnimatePresence mode="popLayout">
           {posts.map((post) => (
             <PostCard
