@@ -235,12 +235,14 @@ setSections([
     rounded-2xl
     border
     border-white/10
-    bg-[#0F1117]
+    bg-white
     px-6
     py-4
     mb-6
     text-2xl
     font-bold
+    text-[#172033]
+placeholder:text-slate-400
     outline-none
     focus:border-yellow-400
   "
