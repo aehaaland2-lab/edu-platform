@@ -24,7 +24,8 @@ export default function Profile() {
 
     return Math.round(
       attempts.reduce(
-        (sum, item) => sum + (item.score / item.total) * 100,
+        (sum, item) =>
+          sum + (item.total ? (item.score / item.total) * 100 : 0),
         0
       ) / attempts.length
     )
@@ -34,8 +35,10 @@ export default function Profile() {
     if (!attempts.length) return 0
 
     return Math.max(
-      ...attempts.map(
-        (item) => Math.round((item.score / item.total) * 100)
+      ...attempts.map((item) =>
+        item.total
+          ? Math.round((item.score / item.total) * 100)
+          : 0
       )
     )
   }, [attempts])
@@ -45,7 +48,8 @@ export default function Profile() {
 
     return Math.round(
       teacherAttempts.reduce(
-        (sum, item) => sum + (item.score / item.total) * 100,
+        (sum, item) =>
+          sum + (item.total ? (item.score / item.total) * 100 : 0),
         0
       ) / teacherAttempts.length
     )
@@ -89,8 +93,7 @@ export default function Profile() {
           total,
           xp,
           user_id,
-          test_id,
-          tests(title)
+          test_id
         `)
         .eq("user_id", id)
         .order("created_at", { ascending: false })
@@ -115,87 +118,122 @@ export default function Profile() {
           .select(`
             score,
             total,
+            xp,
             user_id,
-            test_id,
-            xp
+            test_id
           `)
           .in("test_id", ids)
 
         setTeacherAttempts(allAttempts || [])
+      } else {
+        setTeacherAttempts([])
       }
     }
   }
 
   if (!profile) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-500">
-        Loading...
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-slate-200 border-t-yellow-400 animate-spin" />
+          <p className="text-slate-500 font-medium">
+            Loading profile...
+          </p>
+        </div>
       </div>
     )
   }
 
-  const statCard = `
-    rounded-[24px]
-    border
-    border-slate-200
-    bg-white
-    p-6
-    shadow-[0_10px_30px_rgba(15,23,42,0.05)]
-  `
+  const isStudent = profile.role === "student"
 
   return (
-    <div className="mx-auto max-w-6xl pb-20">
-      <motion.div
-        initial={{ opacity: 0, y: 25 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="
-          overflow-hidden
-          rounded-[36px]
-          border
-          border-yellow-200
-          bg-gradient-to-br
-          from-white
-          via-white
-          to-yellow-50
-          shadow-[0_20px_60px_rgba(234,179,8,0.08)]
-        "
-      >
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-6xl mx-auto pb-20 text-slate-900"
+    >
+
+      {/* PROFILE HEADER */}
+
+      <section className="
+        overflow-hidden
+        rounded-[32px]
+        border
+        border-slate-200
+        bg-white
+        shadow-[0_20px_70px_rgba(15,23,42,0.08)]
+      ">
+
         {/* Cover */}
-        <div
-          className="
-            relative
-            h-52
-            overflow-hidden
-            bg-gradient-to-r
-            from-yellow-100
-            via-white
-            to-yellow-50
-          "
-        >
-          <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-yellow-300/30 blur-[90px]" />
-          <div className="absolute -left-20 top-20 h-52 w-52 rounded-full bg-orange-200/20 blur-[80px]" />
+
+        <div className="
+          relative
+          h-44
+          overflow-hidden
+          bg-gradient-to-r
+          from-yellow-100
+          via-slate-100
+          to-sky-100
+        ">
+
+          <div className="
+            absolute
+            -right-20
+            -top-32
+            h-80
+            w-80
+            rounded-full
+            bg-yellow-300/30
+            blur-3xl
+          " />
+
+          <div className="
+            absolute
+            -left-20
+            -bottom-32
+            h-80
+            w-80
+            rounded-full
+            bg-sky-300/20
+            blur-3xl
+          " />
+
+          <div className="
+            absolute
+            inset-x-0
+            bottom-0
+            h-20
+            bg-gradient-to-t
+            from-white/50
+            to-transparent
+          " />
+
         </div>
 
-        <div className="px-8 pb-10 md:px-10">
-          {/* Avatar */}
+        {/* Main profile */}
+
+        <div className="px-7 pb-8 md:px-10">
+
           <div className="-mt-16 relative">
-            <div
-              className="
-                flex
-                h-32
-                w-32
-                items-center
-                justify-center
-                overflow-hidden
-                rounded-full
-                border-4
-                border-white
-                bg-gradient-to-br
-                from-yellow-400
-                to-amber-500
-                shadow-[0_10px_30px_rgba(234,179,8,0.25)]
-              "
-            >
+
+            {/* Avatar */}
+
+            <div className="
+              flex
+              h-32
+              w-32
+              items-center
+              justify-center
+              overflow-hidden
+              rounded-full
+              border-4
+              border-white
+              bg-gradient-to-br
+              from-yellow-400
+              to-amber-500
+              shadow-[0_12px_35px_rgba(15,23,42,0.18)]
+            ">
+
               {profile.avatar_url ? (
                 <img
                   src={profile.avatar_url}
@@ -203,307 +241,497 @@ export default function Profile() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="text-5xl text-white">
-                  👤
+                <span className="
+                  text-5xl
+                  font-bold
+                  text-white
+                ">
+                  {(profile.username || "?")
+                    .charAt(0)
+                    .toUpperCase()}
                 </span>
               )}
+
             </div>
+
           </div>
 
-          {/* Profile heading */}
-          <div className="mt-6">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">
-              {profile.username}
-            </h1>
+          {/* Name */}
 
-            <p className="mt-2 text-sm font-bold uppercase tracking-[0.35em] text-yellow-600">
-              {profile.role}
-            </p>
+          <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+
+            <div>
+
+              <h1 className="
+                text-4xl
+                font-black
+                tracking-tight
+                text-slate-900
+              ">
+                {profile.username}
+              </h1>
+
+              <div className="mt-2 flex items-center gap-3">
+
+                <span className="
+                  rounded-full
+                  bg-yellow-100
+                  px-3
+                  py-1
+                  text-xs
+                  font-black
+                  uppercase
+                  tracking-[0.25em]
+                  text-yellow-700
+                ">
+                  {profile.role}
+                </span>
+
+                <span className="text-sm text-slate-400">
+                  Level {level}
+                </span>
+
+              </div>
+
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/edit-profile")}
+              className="
+                rounded-2xl
+                bg-gradient-to-r
+                from-yellow-400
+                to-amber-500
+                px-7
+                py-3.5
+                font-bold
+                text-slate-900
+                shadow-[0_8px_25px_rgba(245,158,11,0.22)]
+                transition
+                hover:shadow-[0_12px_30px_rgba(245,158,11,0.3)]
+              "
+            >
+              Edit Profile
+            </motion.button>
+
           </div>
 
-          {/* Stats */}
-          <div className="mt-8 grid gap-4 md:grid-cols-4">
-            <div className={statCard}>
-              <p className="text-sm font-medium text-slate-500">
-                Level
-              </p>
+          {/* Statistics */}
 
-              <h2 className="mt-2 text-3xl font-black text-slate-900">
-                {level}
-              </h2>
-            </div>
+          <div className="
+            mt-8
+            grid
+            gap-4
+            sm:grid-cols-2
+            lg:grid-cols-4
+          ">
 
-            <div className={statCard}>
-              <p className="text-sm font-medium text-slate-500">
-                XP
-              </p>
+            <StatCard
+              label="Level"
+              value={level}
+            />
 
-              <h2 className="mt-2 text-3xl font-black text-slate-900">
-                {profile.xp || 0}
-              </h2>
-            </div>
+            <StatCard
+              label="XP"
+              value={profile.xp || 0}
+              accent="yellow"
+            />
 
-            {profile.role === "student" ? (
+            {isStudent ? (
               <>
-                <div className={statCard}>
-                  <p className="text-sm font-medium text-slate-500">
-                    Completed Tests
-                  </p>
+                <StatCard
+                  label="Completed Tests"
+                  value={attempts.length}
+                />
 
-                  <h2 className="mt-2 text-3xl font-black text-slate-900">
-                    {attempts.length}
-                  </h2>
-                </div>
-
-                <div className={statCard}>
-                  <p className="text-sm font-medium text-slate-500">
-                    Best Score
-                  </p>
-
-                  <h2 className="mt-2 text-3xl font-black text-green-500">
-                    {bestScore}%
-                  </h2>
-                </div>
-
-                <div className={`${statCard} md:col-span-2`}>
-                  <p className="text-sm font-medium text-slate-500">
-                    Average Score
-                  </p>
-
-                  <h2 className="mt-2 text-4xl font-black text-yellow-500">
-                    {averageScore}%
-                  </h2>
-                </div>
+                <StatCard
+                  label="Best Score"
+                  value={`${bestScore}%`}
+                  accent="green"
+                />
               </>
             ) : (
               <>
-                <div className={statCard}>
-                  <p className="text-sm font-medium text-slate-500">
-                    Created Tests
-                  </p>
+                <StatCard
+                  label="Created Tests"
+                  value={createdTests.length}
+                />
 
-                  <h2 className="mt-2 text-3xl font-black text-slate-900">
-                    {createdTests.length}
-                  </h2>
-                </div>
-
-                <div className={statCard}>
-                  <p className="text-sm font-medium text-slate-500">
-                    Total Attempts
-                  </p>
-
-                  <h2 className="mt-2 text-3xl font-black text-slate-900">
-                    {teacherAttempts.length}
-                  </h2>
-                </div>
-
-                <div className={statCard}>
-                  <p className="text-sm font-medium text-slate-500">
-                    Students
-                  </p>
-
-                  <h2 className="mt-2 text-3xl font-black text-yellow-500">
-                    {uniqueStudents}
-                  </h2>
-                </div>
-
-                <div className={statCard}>
-                  <p className="text-sm font-medium text-slate-500">
-                    Total XP Given
-                  </p>
-
-                  <h2 className="mt-2 text-3xl font-black text-yellow-500">
-                    {totalTeacherXp}
-                  </h2>
-                </div>
-
-                <div className={`${statCard} md:col-span-2`}>
-                  <p className="text-sm font-medium text-slate-500">
-                    Average Student Score
-                  </p>
-
-                  <h2 className="mt-2 text-4xl font-black text-sky-500">
-                    {teacherAverage}%
-                  </h2>
-                </div>
+                <StatCard
+                  label="Total Attempts"
+                  value={teacherAttempts.length}
+                />
               </>
             )}
+
           </div>
 
-          {/* Edit button */}
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => navigate("/edit-profile")}
-            className="
-              mt-8
-              rounded-2xl
-              bg-gradient-to-r
-              from-yellow-400
-              to-amber-500
-              px-8
-              py-4
-              font-black
-              text-slate-900
-              shadow-[0_10px_25px_rgba(234,179,8,0.2)]
-              transition
-              hover:shadow-[0_15px_35px_rgba(234,179,8,0.28)]
-            "
-          >
-            Edit Profile
-          </motion.button>
-        </div>
-      </motion.div>
+          {/* Secondary statistics */}
 
-      {/* Student */}
-      {profile.role === "student" ? (
-        <>
-          <div className="mb-5 mt-12">
-            <p className="text-sm font-bold uppercase tracking-[0.3em] text-yellow-600">
-              Progress
-            </p>
+          <div className="
+            mt-4
+            grid
+            gap-4
+            sm:grid-cols-2
+            lg:grid-cols-3
+          ">
 
-            <h2 className="mt-2 text-3xl font-black text-slate-900">
-              Recent Tests
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            {attempts.length === 0 ? (
-              <div
-                className="
-                  rounded-[28px]
-                  border
-                  border-yellow-100
-                  bg-gradient-to-br
-                  from-white
-                  to-yellow-50
-                  p-12
-                  text-center
-                  shadow-[0_10px_30px_rgba(15,23,42,0.04)]
-                "
-              >
-                <div className="text-6xl">
-                  📝
-                </div>
-
-                <h2 className="mt-4 text-2xl font-black text-slate-900">
-                  No tests completed
-                </h2>
-
-                <p className="mt-2 text-slate-500">
-                  Complete your first test to see your results here.
-                </p>
-              </div>
+            {isStudent ? (
+              <StatCard
+                label="Average Score"
+                value={`${averageScore}%`}
+                accent="yellow"
+                large
+              />
             ) : (
-              attempts.map((attempt, index) => {
-                const percentage = Math.round(
-                  (attempt.score / attempt.total) * 100
-                )
+              <>
+                <StatCard
+                  label="Students"
+                  value={uniqueStudents}
+                  accent="violet"
+                />
+
+                <StatCard
+                  label="Total XP Given"
+                  value={totalTeacherXp}
+                  accent="yellow"
+                />
+
+                <StatCard
+                  label="Average Student Score"
+                  value={`${teacherAverage}%`}
+                  accent="sky"
+                  large
+                />
+              </>
+            )}
+
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* CONTENT */}
+
+      {isStudent ? (
+
+        <section className="mt-10">
+
+          <div className="mb-5 flex items-end justify-between">
+
+            <div>
+              <p className="
+                text-xs
+                font-bold
+                uppercase
+                tracking-[0.3em]
+                text-yellow-600
+              ">
+                Progress
+              </p>
+
+              <h2 className="
+                mt-1
+                text-3xl
+                font-black
+                tracking-tight
+                text-slate-900
+              ">
+                Recent Tests
+              </h2>
+            </div>
+
+            <div className="text-sm text-slate-400">
+              {attempts.length} completed
+            </div>
+
+          </div>
+
+          {attempts.length === 0 ? (
+
+            <EmptyState
+              icon="📝"
+              title="No tests completed"
+              description="Complete your first test to see your results here."
+            />
+
+          ) : (
+
+            <div className="space-y-4">
+
+              {attempts.map((attempt, index) => {
+
+                const percentage = attempt.total
+                  ? Math.round(
+                      (attempt.score / attempt.total) * 100
+                    )
+                  : 0
 
                 return (
                   <motion.div
-                    key={index}
+                    key={`${attempt.test_id}-${index}`}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ y: -2 }}
+                    transition={{ delay: index * 0.04 }}
                     className="
                       flex
                       items-center
                       justify-between
-                      rounded-[24px]
+                      gap-5
+                      rounded-2xl
                       border
                       border-slate-200
                       bg-white
-                      p-5
-                      shadow-[0_8px_25px_rgba(15,23,42,0.04)]
+                      px-6
+                      py-5
+                      shadow-sm
                       transition
-                      hover:border-yellow-200
+                      hover:-translate-y-0.5
+                      hover:shadow-md
                     "
                   >
-                    <div>
-                      <h3 className="text-xl font-black text-slate-900">
-                        {attempt.tests?.title || "Completed Test"}
-                      </h3>
 
-                      <p className="mt-1 text-sm font-medium text-slate-500">
-                        +{attempt.xp || 0} XP
+                    <div className="flex items-center gap-4">
+
+                      <div className="
+                        flex
+                        h-12
+                        w-12
+                        shrink-0
+                        items-center
+                        justify-center
+                        rounded-2xl
+                        bg-yellow-100
+                        text-xl
+                      ">
+                        📝
+                      </div>
+
+                      <div>
+
+                        <h3 className="
+                          font-bold
+                          text-slate-900
+                        ">
+                          Test
+                        </h3>
+
+                        <p className="
+                          mt-1
+                          text-sm
+                          text-slate-500
+                        ">
+                          +{attempt.xp || 0} XP
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    <div className="text-right">
+
+                      <div className="
+                        text-2xl
+                        font-black
+                        text-yellow-500
+                      ">
+                        {percentage}%
+                      </div>
+
+                      <p className="
+                        text-xs
+                        text-slate-400
+                      ">
+                        {attempt.score}/{attempt.total}
                       </p>
+
                     </div>
 
-                    <div className="rounded-2xl bg-yellow-50 px-5 py-3 text-2xl font-black text-yellow-600">
-                      {percentage}%
-                    </div>
                   </motion.div>
                 )
-              })
-            )}
-          </div>
-        </>
+              })}
+
+            </div>
+
+          )}
+
+        </section>
+
       ) : (
-        <>
-          <div className="mb-5 mt-12">
-            <p className="text-sm font-bold uppercase tracking-[0.3em] text-yellow-600">
-              Community
+
+        <section className="mt-10">
+
+          <div className="mb-5">
+
+            <p className="
+              text-xs
+              font-bold
+              uppercase
+              tracking-[0.3em]
+              text-yellow-600
+            ">
+              Teacher
             </p>
 
-            <h2 className="mt-2 text-3xl font-black text-slate-900">
+            <h2 className="
+              mt-1
+              text-3xl
+              font-black
+              tracking-tight
+              text-slate-900
+            ">
               Published Posts
             </h2>
+
           </div>
 
-          <div className="space-y-4">
-            {posts.length === 0 ? (
-              <div
-                className="
-                  rounded-[28px]
-                  border
-                  border-yellow-100
-                  bg-gradient-to-br
-                  from-white
-                  to-yellow-50
-                  p-12
-                  text-center
-                  shadow-[0_10px_30px_rgba(15,23,42,0.04)]
-                "
-              >
-                <div className="text-6xl">
-                  📚
-                </div>
+          {posts.length === 0 ? (
 
-                <h2 className="mt-4 text-2xl font-black text-slate-900">
-                  No posts yet
-                </h2>
+            <EmptyState
+              icon="📚"
+              title="No posts yet"
+              description="Published posts will appear here."
+            />
 
-                <p className="mt-2 text-slate-500">
-                  Published posts will appear here.
-                </p>
-              </div>
-            ) : (
-              posts.map((post) => (
+          ) : (
+
+            <div className="space-y-4">
+
+              {posts.map((post, index) => (
+
                 <motion.div
                   key={post.id}
-                  whileHover={{ y: -2 }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04 }}
                   className="
-                    rounded-[28px]
+                    rounded-2xl
                     border
                     border-slate-200
                     bg-white
                     p-6
-                    shadow-[0_8px_25px_rgba(15,23,42,0.04)]
+                    shadow-sm
                     transition
-                    hover:border-yellow-200
+                    hover:shadow-md
                   "
                 >
-                  <p className="whitespace-pre-wrap text-slate-700">
+
+                  <p className="
+                    whitespace-pre-wrap
+                    leading-7
+                    text-slate-700
+                  ">
                     {post.content}
                   </p>
+
                 </motion.div>
-              ))
-            )}
-          </div>
-        </>
+
+              ))}
+
+            </div>
+
+          )}
+
+        </section>
+
       )}
+
+    </motion.div>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+  accent = "default",
+  large = false,
+}) {
+
+  const accentClasses = {
+    default: "text-slate-900",
+    yellow: "text-yellow-500",
+    green: "text-emerald-500",
+    violet: "text-violet-500",
+    sky: "text-sky-500",
+  }
+
+  return (
+    <div className="
+      rounded-2xl
+      border
+      border-slate-200
+      bg-slate-50
+      p-5
+      transition
+      hover:bg-white
+      hover:shadow-sm
+    ">
+
+      <p className="
+        text-sm
+        font-medium
+        text-slate-500
+      ">
+        {label}
+      </p>
+
+      <p className={`
+        mt-2
+        font-black
+        tracking-tight
+        ${large ? "text-4xl" : "text-3xl"}
+        ${accentClasses[accent]}
+      `}>
+        {value}
+      </p>
+
+    </div>
+  )
+}
+
+function EmptyState({
+  icon,
+  title,
+  description,
+}) {
+
+  return (
+    <div className="
+      rounded-3xl
+      border
+      border-slate-200
+      bg-white
+      px-6
+      py-14
+      text-center
+      shadow-sm
+    ">
+
+      <div className="text-5xl">
+        {icon}
+      </div>
+
+      <h3 className="
+        mt-4
+        text-2xl
+        font-black
+        text-slate-900
+      ">
+        {title}
+      </h3>
+
+      <p className="
+        mx-auto
+        mt-2
+        max-w-md
+        text-slate-500
+      ">
+        {description}
+      </p>
+
     </div>
   )
 }
