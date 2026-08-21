@@ -12,6 +12,7 @@ import Layout from "./components/Layout"
 import Auth from "./pages/Auth"
 import Feed from "./pages/Feed"
 import Tests from "./pages/Tests"
+import Leaderboard from "./pages/Leaderboard"
 import LoadingScreen from "./components/LoadingScreen"
 
 function Messages() {
@@ -98,6 +99,7 @@ checkProfile(currentUser)
       <Routes>
         <Route path="/" element={<Feed />} />
         <Route path="/tests" element={<Tests />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
