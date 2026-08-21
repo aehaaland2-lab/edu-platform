@@ -11,11 +11,12 @@ export default function Layout({ user, logout, children }) {
   }, [])
 
   const navItems = [
-    { to: "/", label: "🏠 Feed" },
-    { to: "/tests", label: "📚 Tests" },
-    { to: "/messages", label: "💬 Messages" },
-    { to: `/profile/${user?.id}`, label: "👤 Profile" },
-  ]
+  { to: "/", label: "🏠 Feed" },
+  { to: "/tests", label: "📚 Tests" },
+  { to: "/leaderboard", label: "🏆 Leaderboard" },
+  { to: "/messages", label: "💬 Messages" },
+  { to: `/profile/${user?.id}`, label: "👤 Profile" },
+]
 
   return (
     <div className="min-h-screen bg-[#09090B] text-white">
