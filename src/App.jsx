@@ -6,6 +6,7 @@ import EditProfile from "./pages/EditProfile"
 import TestEditor from "./pages/TestEditor"
 import PlayTest from "./pages/PlayTest"
 import CompleteProfile from "./pages/CompleteProfile"
+import Messages from "./pages/Messages"
 
 import Layout from "./components/Layout"
 import Auth from "./pages/Auth"
@@ -14,10 +15,6 @@ import Tests from "./pages/Tests"
 import Leaderboard from "./pages/Leaderboard"
 
 import { supabase } from "./supabase"
-
-function Messages() {
-  return <h1 className="text-2xl">Messages</h1>
-}
 
 export default function App() {
   const [user, setUser] = useState(null)
