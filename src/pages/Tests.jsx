@@ -211,17 +211,15 @@ export default function Tests() {
 
   return (
 
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto pb-20">
 
       <div className="flex items-center justify-between mb-8">
 
         <div>
 
-          <h1 className="text-5xl font-black">
-            Tests
-          </h1>
+          <h1 className="text-5xl font-black text-slate-900">Tests</h1>
 
-          <p className="text-slate-400 mt-2">
+          <p className="text-slate-500 mt-2 text-lg">
 
             Browse folders and tests.
 
