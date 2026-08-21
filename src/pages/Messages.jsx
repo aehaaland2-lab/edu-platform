@@ -306,6 +306,22 @@ export default function Messages() {
   function cancelReply() {
     setReplyTo(null)
   }
+  async function openMentionProfile(username) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("username", username)
+    .maybeSingle()
+
+  if (error) {
+    console.error(error)
+    return
+  }
+
+  if (!data?.id) return
+
+  window.location.href = `/profile/${data.id}`
+}
 
   function handleTextChange(e) {
     const value = e.target.value
@@ -619,9 +635,32 @@ export default function Messages() {
                                       : "Replied to you"}
                                   </p>
 
-                                  <p className="mt-1 line-clamp-2 text-sm text-slate-500">
-                                    {message.content}
-                                  </p>
+                                  <p className="whitespace-pre-wrap break-words">
+  {message.content.split(/(@[a-zA-Z0-9_.-]+)/g).map((part, index) => {
+    if (!part.startsWith("@")) {
+      return <span key={index}>{part}</span>
+    }
+
+    const username = part.slice(1)
+
+    return (
+      <button
+        key={index}
+        type="button"
+        onClick={() => openMentionProfile(username)}
+        className="
+          font-bold
+          text-yellow-600
+          transition
+          hover:text-yellow-700
+          hover:underline
+        "
+      >
+        {part}
+      </button>
+    )
+  })}
+</p>
                                 </div>
                               </div>
                             </button>
