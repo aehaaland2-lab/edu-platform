@@ -237,8 +237,8 @@ to-yellow-50
   className="
     w-full
     rounded-2xl
-    border
-    border-white/10
+    border-2
+    border-slate-200
     bg-white
     px-6
     py-4
@@ -248,7 +248,13 @@ to-yellow-50
     text-slate-950
     placeholder:text-slate-400
     outline-none
-    focus:border-yellow-400
+    shadow-[0_8px_30px_rgba(15,23,42,.06)]
+    transition-all
+    duration-200
+    focus:border-yellow-300
+    focus:ring-4
+    focus:ring-yellow-100
+    focus:shadow-[0_10px_35px_rgba(234,179,8,.12)]
   "
 />
 
