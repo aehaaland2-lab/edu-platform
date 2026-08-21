@@ -245,8 +245,8 @@ to-yellow-50
     mb-6
     text-2xl
     font-bold
-    text-[#172033]
-placeholder:text-slate-400
+    text-slate-950
+    placeholder:text-slate-400
     outline-none
     focus:border-yellow-400
   "
@@ -307,7 +307,8 @@ placeholder:text-slate-400
           outline-none
           text-[15px]
           leading-7
-          text-slate-700
+          text-slate-800
+          font-bold
           placeholder:text-slate-400
           transition
           focus:border-yellow-300
