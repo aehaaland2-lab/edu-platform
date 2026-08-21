@@ -97,6 +97,7 @@ export default function PostCard({ post, deletePost, user }) {
         hover:-translate-y-1
         hover:border-yellow-300
         hover:shadow-[0_20px_55px_rgba(15,23,42,.11)]
+        hover:border-yellow-300
       "
     >
       <div className="

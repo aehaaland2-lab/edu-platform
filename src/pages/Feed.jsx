@@ -158,7 +158,7 @@ setSections([
           shadow-[0_20px_60px_rgba(15,23,42,.08)]
         "
       >
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-yellow-300/25 blur-[90px]" />
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-yellow-300/25 blur-[90px] " />
 
         <p className="text-yellow-600 uppercase tracking-[0.28em] text-sm font-bold">
           Welcome Back
@@ -173,17 +173,17 @@ setSections([
         </p>
 
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+          <div className="rounded-2xl bg-white px-6 py-5 border border-slate-200">
             <p className="text-slate-500 text-sm font-medium">Posts</p>
             <h2 className="mt-1 text-3xl font-black text-slate-950">{posts.length}</h2>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+          <div className="rounded-2xl bg-white px-6 py-5 border border-slate-200">
             <p className="text-slate-500 text-sm font-medium">Level</p>
             <h2 className="mt-1 text-3xl font-black text-slate-950">1</h2>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+          <div className="rounded-2xl bg-yellow-50 px-6 py-5 border border-yellow-200">
             <p className="text-slate-500 text-sm font-medium">XP</p>
             <h2 className="mt-1 text-3xl font-black text-slate-950">0</h2>
           </div>
@@ -205,6 +205,10 @@ setSections([
           p-6
           md:p-8
           shadow-[0_16px_50px_rgba(15,23,42,.07)]
+          bg-gradient-to-br
+from-white
+via-white
+to-yellow-50
         "
       >
         <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-yellow-200/35 blur-[80px]" />
