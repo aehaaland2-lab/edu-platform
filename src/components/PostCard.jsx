@@ -97,28 +97,33 @@ export default function PostCard({ post, deletePost, user }) {
         hover:-translate-y-1
         hover:border-yellow-300
         hover:shadow-[0_20px_55px_rgba(15,23,42,.11)]
-        hover:border-yellow-300
       "
     >
-      <div className="
-        pointer-events-none
-        absolute
-        -right-24
-        -top-24
-        h-56
-        w-56
-        rounded-full
-        bg-yellow-200/30
-        blur-[80px]
-        opacity-0
-        transition-opacity
-        duration-500
-        group-hover:opacity-100
-      " />
+      <div
+        className="
+          pointer-events-none
+          absolute
+          -right-24
+          -top-24
+          h-56
+          w-56
+          rounded-full
+          bg-yellow-200/30
+          blur-[80px]
+          opacity-0
+          transition-opacity
+          duration-500
+          group-hover:opacity-100
+        "
+      />
 
       <div className="relative z-10">
+
+        {/* HEADER */}
+
         <div className="flex items-start justify-between gap-5">
           <div className="flex min-w-0 items-center gap-4">
+
             <motion.div
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
@@ -140,15 +145,17 @@ export default function PostCard({ post, deletePost, user }) {
                   alt=""
                 />
               ) : (
-                <div className="
-                  flex
-                  h-full
-                  w-full
-                  items-center
-                  justify-center
-                  bg-slate-100
-                  text-lg
-                ">
+                <div
+                  className="
+                    flex
+                    h-full
+                    w-full
+                    items-center
+                    justify-center
+                    bg-slate-100
+                    text-lg
+                  "
+                >
                   👤
                 </div>
               )}
@@ -171,10 +178,18 @@ export default function PostCard({ post, deletePost, user }) {
               </Link>
 
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span>{post.profiles?.role || "Unknown Role"}</span>
+                <span>
+                  {post.profiles?.role || "Unknown Role"}
+                </span>
+
                 <span>•</span>
-                <span>{post.profiles?.xp ?? 0} XP</span>
+
+                <span>
+                  {post.profiles?.xp ?? 0} XP
+                </span>
+
                 <span>•</span>
+
                 <span>
                   {new Date(post.created_at).toLocaleDateString()}
                 </span>
@@ -203,16 +218,55 @@ export default function PostCard({ post, deletePost, user }) {
           )}
         </div>
 
+        {/* CONTENT */}
+
         <div className="mt-7">
-          <h2 className="
-            text-2xl
-            font-black
-            leading-tight
-            tracking-tight
-            text-slate-950
-          ">
+
+          <h2
+            className="
+              text-2xl
+              font-black
+              leading-tight
+              tracking-tight
+              text-slate-950
+            "
+          >
             {post.title}
           </h2>
+
+          {/* POST IMAGE */}
+
+          {post.image_url && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="
+                mt-5
+                overflow-hidden
+                rounded-3xl
+                border
+                border-slate-200
+                bg-slate-100
+              "
+            >
+              <img
+                src={post.image_url}
+                alt={post.title || "Post image"}
+                className="
+                  block
+                  max-h-[600px]
+                  w-full
+                  object-cover
+                  transition-transform
+                  duration-500
+                  group-hover:scale-[1.01]
+                "
+              />
+            </motion.div>
+          )}
+
+          {/* SECTIONS */}
 
           {(post.post_sections || [])
             .slice()
@@ -248,19 +302,21 @@ export default function PostCard({ post, deletePost, user }) {
                     {section.title || `Section ${index + 1}`}
                   </span>
 
-                  <span className="
-                    flex
-                    h-7
-                    w-7
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-white
-                    text-sm
-                    text-slate-500
-                    shadow-sm
-                  ">
+                  <span
+                    className="
+                      flex
+                      h-7
+                      w-7
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-white
+                      text-sm
+                      text-slate-500
+                      shadow-sm
+                    "
+                  >
                     {openedSections[section.id] ? "−" : "+"}
                   </span>
                 </button>
@@ -268,23 +324,36 @@ export default function PostCard({ post, deletePost, user }) {
                 <AnimatePresence initial={false}>
                   {openedSections[section.id] && (
                     <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.22 }}
+                      initial={{
+                        height: 0,
+                        opacity: 0,
+                      }}
+                      animate={{
+                        height: "auto",
+                        opacity: 1,
+                      }}
+                      exit={{
+                        height: 0,
+                        opacity: 0,
+                      }}
+                      transition={{
+                        duration: 0.22,
+                      }}
                       className="overflow-hidden"
                     >
-                      <div className="
-                        border-t
-                        border-slate-200
-                        bg-white
-                        px-5
-                        py-5
-                        whitespace-pre-wrap
-                        text-[15px]
-                        leading-7
-                        text-slate-600
-                      ">
+                      <div
+                        className="
+                          border-t
+                          border-slate-200
+                          bg-white
+                          px-5
+                          py-5
+                          whitespace-pre-wrap
+                          text-[15px]
+                          leading-7
+                          text-slate-600
+                        "
+                      >
                         {section.content}
                       </div>
                     </motion.div>
@@ -294,15 +363,19 @@ export default function PostCard({ post, deletePost, user }) {
             ))}
         </div>
 
-        <div className="
-          mt-7
-          flex
-          flex-wrap
-          gap-2
-          border-t
-          border-slate-200
-          pt-5
-        ">
+        {/* ACTIONS */}
+
+        <div
+          className="
+            mt-7
+            flex
+            flex-wrap
+            gap-2
+            border-t
+            border-slate-200
+            pt-5
+          "
+        >
           <button
             onClick={toggleLike}
             className={`
@@ -316,9 +389,11 @@ export default function PostCard({ post, deletePost, user }) {
               font-semibold
               transition-all
               active:scale-95
-              ${liked
-                ? "bg-pink-50 text-pink-600"
-                : "bg-slate-100 text-slate-600 hover:bg-pink-50 hover:text-pink-600"}
+              ${
+                liked
+                  ? "bg-pink-50 text-pink-600"
+                  : "bg-slate-100 text-slate-600 hover:bg-pink-50 hover:text-pink-600"
+              }
             `}
           >
             <motion.span
@@ -333,6 +408,7 @@ export default function PostCard({ post, deletePost, user }) {
             >
               ❤️
             </motion.span>
+
             {likes}
           </button>
 
@@ -374,12 +450,15 @@ export default function PostCard({ post, deletePost, user }) {
           </button>
         </div>
 
+        {/* COMMENTS */}
+
         {showComments && (
           <CommentSection
             postId={post.id}
             user={user}
           />
         )}
+
       </div>
     </motion.article>
   )
