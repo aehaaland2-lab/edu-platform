@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "../supabase"
 
@@ -7,10 +8,13 @@ export default function Messages() {
   const [text, setText] = useState("")
   const [user, setUser] = useState(null)
   const [sending, setSending] = useState(false)
+
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
+
   const [replyTo, setReplyTo] = useState(null)
   const [highlightedMessage, setHighlightedMessage] = useState(null)
+
   const [mentionUsers, setMentionUsers] = useState([])
   const [showMentionList, setShowMentionList] = useState(false)
   const [mentionQuery, setMentionQuery] = useState("")
@@ -18,24 +22,36 @@ export default function Messages() {
 
   const bottomRef = useRef(null)
   const messageRefs = useRef({})
-  const inputRef = useRef(null)
 
   useEffect(() => {
     initialize()
 
-    const channel = supabase
+    const messageChannel = supabase
       .channel("messages-room")
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, loadMessages)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "messages",
+        },
+        () => {
+          loadMessages()
+        }
+      )
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    return () => {
+      supabase.removeChannel(messageChannel)
+    }
   }, [])
 
   useEffect(() => {
     if (!user) return
+
     loadNotifications()
 
-    const channel = supabase
+    const notificationChannel = supabase
       .channel(`notifications-${user.id}`)
       .on(
         "postgres_changes",
@@ -45,29 +61,36 @@ export default function Messages() {
           table: "message_notifications",
           filter: `user_id=eq.${user.id}`,
         },
-        loadNotifications
+        () => {
+          loadNotifications()
+        }
       )
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    return () => {
+      supabase.removeChannel(notificationChannel)
+    }
   }, [user])
 
   useEffect(() => {
     if (!showNotifications) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+      bottomRef.current?.scrollIntoView({
+        behavior: "smooth",
+      })
     }
   }, [messages, showNotifications])
 
   async function initialize() {
-    const currentUser = await loadUser()
+    await loadUser()
     await loadMessages()
-    if (currentUser) await loadNotifications(currentUser.id)
   }
 
   async function loadUser() {
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    setUser(currentUser)
-    return currentUser
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    setUser(user)
   }
 
   async function loadMessages() {
@@ -79,7 +102,11 @@ export default function Messages() {
         created_at,
         user_id,
         reply_to,
-        profiles ( username, avatar_url )
+        profiles (
+          id,
+          username,
+          avatar_url
+        )
       `)
       .order("created_at", { ascending: true })
 
@@ -87,11 +114,12 @@ export default function Messages() {
       console.error(error)
       return
     }
+
     setMessages(data || [])
   }
 
-  async function loadNotifications(userId = user?.id) {
-    if (!userId) return
+  async function loadNotifications() {
+    if (!user) return
 
     const { data, error } = await supabase
       .from("message_notifications")
@@ -106,40 +134,50 @@ export default function Messages() {
           content,
           user_id,
           created_at,
-          profiles ( username, avatar_url )
+          profiles (
+            id,
+            username,
+            avatar_url
+          )
         )
       `)
-      .eq("user_id", userId)
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
 
     if (error) {
       console.error(error)
       return
     }
+
     setNotifications(data || [])
   }
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read
+  ).length
 
   async function searchMentionUsers(query) {
     if (!user) return
+
+    const cleanQuery = query.trim()
 
     let request = supabase
       .from("profiles")
       .select("id, username, avatar_url")
       .neq("id", user.id)
-      .not("username", "is", null)
-      .order("username", { ascending: true })
       .limit(8)
 
-    if (query.trim()) {
-      request = request.ilike("username", `${query.trim()}%`)
+    if (cleanQuery) {
+      request = request.ilike(
+        "username",
+        `%${cleanQuery}%`
+      )
     }
 
     const { data, error } = await request
+
     if (error) {
       console.error(error)
-      setMentionUsers([])
       return
     }
 
@@ -149,9 +187,11 @@ export default function Messages() {
 
   async function sendMessage() {
     if (!text.trim() || !user || sending) return
+
     setSending(true)
 
     const messageText = text.trim()
+
     const { data: insertedMessage, error } = await supabase
       .from("messages")
       .insert({
@@ -170,45 +210,67 @@ export default function Messages() {
     }
 
     if (replyTo && replyTo.user_id !== user.id) {
-      const { error: replyError } = await supabase
+      const { error: notificationError } = await supabase
         .from("message_notifications")
         .insert({
           user_id: replyTo.user_id,
           message_id: insertedMessage.id,
           type: "reply",
         })
-      if (replyError) console.error(replyError)
+
+      if (notificationError) {
+        console.error(notificationError)
+      }
     }
 
-    const usernames = [...messageText.matchAll(/@([a-zA-Z0-9_.-]+)/g)]
-      .map((match) => match[1].toLowerCase())
+    const usernames = [
+      ...messageText.matchAll(
+        /@([a-zA-Z0-9_.-]+)/g
+      ),
+    ].map((match) => match[1])
 
     if (usernames.length) {
-      const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .not("username", "is", null)
+      const uniqueUsernames = [
+        ...new Set(
+          usernames.map((username) =>
+            username.toLowerCase()
+          )
+        ),
+      ]
 
-      if (profileError) {
-        console.error(profileError)
-      } else {
-        const mentioned = (profiles || []).filter((profile) =>
-          usernames.includes(String(profile.username).toLowerCase())
+      const { data: allProfiles, error: profilesError } =
+        await supabase
+          .from("profiles")
+          .select("id, username")
+          .neq("id", user.id)
+
+      if (profilesError) {
+        console.error(profilesError)
+      } else if (allProfiles?.length) {
+        const mentionedProfiles = allProfiles.filter(
+          (profile) =>
+            profile.username &&
+            uniqueUsernames.includes(
+              profile.username.toLowerCase()
+            )
         )
 
-        const rows = mentioned
-          .filter((profile) => profile.id !== user.id)
-          .map((profile) => ({
+        const mentionNotifications =
+          mentionedProfiles.map((profile) => ({
             user_id: profile.id,
             message_id: insertedMessage.id,
             type: "mention",
           }))
 
-        if (rows.length) {
-          const { error: mentionError } = await supabase
-            .from("message_notifications")
-            .insert(rows)
-          if (mentionError) console.error(mentionError)
+        if (mentionNotifications.length) {
+          const { error: mentionError } =
+            await supabase
+              .from("message_notifications")
+              .insert(mentionNotifications)
+
+          if (mentionError) {
+            console.error(mentionError)
+          }
         }
       }
     }
@@ -216,16 +278,19 @@ export default function Messages() {
     setText("")
     setReplyTo(null)
     setShowMentionList(false)
-    setMentionUsers([])
     setMentionQuery("")
     setMentionStart(-1)
     setSending(false)
+
     await loadMessages()
-    setTimeout(() => inputRef.current?.focus(), 50)
   }
 
   async function deleteMessage(id) {
-    const { error } = await supabase.from("messages").delete().eq("id", id)
+    const { error } = await supabase
+      .from("messages")
+      .delete()
+      .eq("id", id)
+
     if (error) {
       console.error(error)
       alert(error.message)
@@ -237,126 +302,360 @@ export default function Messages() {
 
     if (!notification.message_id) return
 
-    const { error } = await supabase
+    await supabase
       .from("message_notifications")
-      .update({ read: true })
+      .update({
+        read: true,
+      })
       .eq("id", notification.id)
-
-    if (error) console.error(error)
 
     setNotifications((prev) =>
       prev.map((item) =>
-        item.id === notification.id ? { ...item, read: true } : item
+        item.id === notification.id
+          ? { ...item, read: true }
+          : item
       )
     )
 
+    const targetId = notification.message_id
+
     setTimeout(() => {
-      const element = messageRefs.current[notification.message_id]
-      if (!element) return
-      element.scrollIntoView({ behavior: "smooth", block: "center" })
-      setHighlightedMessage(notification.message_id)
-      setTimeout(() => setHighlightedMessage(null), 1800)
+      const element = messageRefs.current[targetId]
+
+      if (element) {
+        element.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        })
+
+        setHighlightedMessage(targetId)
+
+        setTimeout(() => {
+          setHighlightedMessage(null)
+        }, 1800)
+      }
     }, 150)
   }
 
   function startReply(message) {
     setReplyTo(message)
-    setShowMentionList(false)
-    setTimeout(() => inputRef.current?.focus(), 50)
+
+    setTimeout(() => {
+      document
+        .querySelector("#message-input")
+        ?.focus()
+    }, 50)
   }
 
   function cancelReply() {
     setReplyTo(null)
-    setTimeout(() => inputRef.current?.focus(), 50)
   }
 
   function handleTextChange(e) {
     const value = e.target.value
-    const cursor = e.target.selectionStart
+
     setText(value)
 
-    const beforeCursor = value.slice(0, cursor)
-    const match = beforeCursor.match(/(^|\s)@([a-zA-Z0-9_.-]*)$/)
+    const cursorPosition = e.target.selectionStart
+
+    const textBeforeCursor = value.slice(
+      0,
+      cursorPosition
+    )
+
+    const match = textBeforeCursor.match(
+      /(^|\s)@([a-zA-Z0-9_.-]*)$/
+    )
 
     if (!match) {
       setShowMentionList(false)
-      setMentionUsers([])
       setMentionQuery("")
       setMentionStart(-1)
       return
     }
 
     const query = match[2]
-    const start = cursor - query.length - 1
+
+    const start =
+      cursorPosition - query.length - 1
+
     setMentionQuery(query)
     setMentionStart(start)
+
     searchMentionUsers(query)
   }
 
-  function selectMention(profile) {
+  function selectMention(selectedProfile) {
     if (mentionStart === -1) return
 
-    const before = text.slice(0, mentionStart)
-    const after = text.slice(mentionStart + mentionQuery.length + 1)
-    const newText = `${before}@${profile.username} ${after}`
+    const before = text.slice(
+      0,
+      mentionStart
+    )
+
+    const after = text.slice(
+      mentionStart +
+        mentionQuery.length +
+        1
+    )
+
+    const newText =
+      before +
+      `@${selectedProfile.username} ` +
+      after
 
     setText(newText)
+
     setShowMentionList(false)
-    setMentionUsers([])
     setMentionQuery("")
     setMentionStart(-1)
 
     setTimeout(() => {
-      inputRef.current?.focus()
-      const position = before.length + String(profile.username).length + 2
-      inputRef.current?.setSelectionRange(position, position)
+      document
+        .querySelector("#message-input")
+        ?.focus()
     }, 50)
   }
 
   function handleKeyDown(e) {
-    if (showMentionList && e.key === "Escape") {
-      e.preventDefault()
+    if (e.key === "Escape") {
       setShowMentionList(false)
       return
     }
 
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (
+      e.key === "Enter" &&
+      !e.shiftKey
+    ) {
       e.preventDefault()
       sendMessage()
     }
   }
 
   function getReplyMessage(id) {
-    return id ? messages.find((message) => message.id === id) : null
+    if (!id) return null
+
+    return messages.find(
+      (message) => message.id === id
+    )
+  }
+
+  /*
+    IMPORTANT:
+
+    Здесь мы превращаем @username
+    в ссылку по PROFILE ID.
+
+    НЕ используем:
+    /profile/username/Mastali
+
+    Используем:
+    /profile/REAL_PROFILE_ID
+  */
+
+  function renderMessageContent(content) {
+    if (!content) return null
+
+    const parts = content.split(
+      /(@[a-zA-Z0-9_.-]+)/
+    )
+
+    return parts.map((part, index) => {
+      if (!part.startsWith("@")) {
+        return (
+          <span key={index}>
+            {part}
+          </span>
+        )
+      }
+
+      const username = part.slice(1)
+
+      const mentionedProfile =
+        messages
+          .map(
+            (message) =>
+              message.profiles
+          )
+          .find(
+            (profile) =>
+              profile?.username?.toLowerCase() ===
+              username.toLowerCase()
+          )
+
+      if (!mentionedProfile?.id) {
+        return (
+          <span
+            key={index}
+            className="font-semibold text-yellow-600"
+          >
+            {part}
+          </span>
+        )
+      }
+
+      return (
+        <Link
+          key={index}
+          to={`/profile/${mentionedProfile.id}`}
+          onClick={(e) =>
+            e.stopPropagation()
+          }
+          className="
+            font-bold
+            text-yellow-600
+            transition
+            hover:text-yellow-700
+            hover:underline
+          "
+        >
+          {part}
+        </Link>
+      )
+    })
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{
+        opacity: 0,
+        y: 15,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
       className="mx-auto max-w-5xl pb-10"
     >
-      <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_25px_80px_rgba(15,23,42,.12)]">
-        <div className="relative border-b border-slate-200 bg-gradient-to-r from-yellow-50 via-white to-violet-50 px-7 py-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-500">Community</p>
+      <div
+        className="
+          overflow-hidden
+          rounded-[32px]
+          border
+          border-slate-200
+          bg-white
+          shadow-[0_25px_80px_rgba(15,23,42,.12)]
+        "
+      >
 
-          <div className="mt-2 flex items-center justify-between gap-4">
+        {/* HEADER */}
+
+        <div
+          className="
+            relative
+            border-b
+            border-slate-200
+            bg-gradient-to-r
+            from-yellow-50
+            via-white
+            to-violet-50
+            px-7
+            py-6
+          "
+        >
+          <p
+            className="
+              text-sm
+              font-semibold
+              uppercase
+              tracking-[0.3em]
+              text-yellow-500
+            "
+          >
+            Community
+          </p>
+
+          <div
+            className="
+              mt-2
+              flex
+              items-center
+              justify-between
+              gap-4
+            "
+          >
             <div>
-              <h1 className="text-4xl font-black text-slate-900">Messages</h1>
-              <p className="mt-2 text-slate-500">Talk with everyone in the EDU community.</p>
+              <h1
+                className="
+                  text-4xl
+                  font-black
+                  text-slate-900
+                "
+              >
+                Messages
+              </h1>
+
+              <p
+                className="
+                  mt-2
+                  text-slate-500
+                "
+              >
+                Talk with everyone in the EDU
+                community.
+              </p>
             </div>
 
+            {/* NOTIFICATIONS */}
+
             <div className="relative">
+
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.94 }}
-                onClick={() => setShowNotifications((value) => !value)}
-                className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-2xl shadow-sm transition hover:border-yellow-300 hover:bg-yellow-50"
+                whileHover={{
+                  scale: 1.05,
+                }}
+                whileTap={{
+                  scale: 0.94,
+                }}
+                onClick={() =>
+                  setShowNotifications(
+                    (value) => !value
+                  )
+                }
+                className="
+                  relative
+                  flex
+                  h-14
+                  w-14
+                  items-center
+                  justify-center
+                  rounded-full
+                  border
+                  border-slate-200
+                  bg-white
+                  text-2xl
+                  shadow-sm
+                  transition
+                  hover:border-yellow-300
+                  hover:bg-yellow-50
+                "
               >
                 🔔
+
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-black text-white ring-4 ring-white">
-                    {unreadCount > 99 ? "99+" : unreadCount}
+                  <span
+                    className="
+                      absolute
+                      -right-1
+                      -top-1
+                      flex
+                      min-h-6
+                      min-w-6
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-red-500
+                      px-1.5
+                      text-xs
+                      font-black
+                      text-white
+                      ring-4
+                      ring-white
+                    "
+                  >
+                    {unreadCount > 99
+                      ? "99+"
+                      : unreadCount}
                   </span>
                 )}
               </motion.button>
@@ -364,216 +663,1050 @@ export default function Messages() {
               <AnimatePresence>
                 {showNotifications && (
                   <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                    className="absolute right-0 top-16 z-[100] w-[360px] max-w-[calc(100vw-40px)] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_25px_80px_rgba(15,23,42,.18)]"
+                    initial={{
+                      opacity: 0,
+                      y: -8,
+                      scale: 0.97,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                    }}
+                    exit={{
+                      opacity: 0,
+                      y: -8,
+                      scale: 0.97,
+                    }}
+                    className="
+                      absolute
+                      right-0
+                      top-16
+                      z-50
+                      w-[360px]
+                      max-w-[calc(100vw-40px)]
+                      overflow-hidden
+                      rounded-3xl
+                      border
+                      border-slate-200
+                      bg-white
+                      shadow-[0_25px_80px_rgba(15,23,42,.18)]
+                    "
                   >
-                    <div className="border-b border-slate-200 bg-gradient-to-r from-yellow-50 to-violet-50 px-5 py-4">
-                      <h3 className="font-black text-slate-900">Mentions & Replies</h3>
-                      <p className="mt-1 text-xs text-slate-500">People who reached out to you</p>
+
+                    <div
+                      className="
+                        border-b
+                        border-slate-200
+                        bg-gradient-to-r
+                        from-yellow-50
+                        to-violet-50
+                        px-5
+                        py-4
+                      "
+                    >
+                      <h3
+                        className="
+                          font-black
+                          text-slate-900
+                        "
+                      >
+                        Mentions & Replies
+                      </h3>
+
+                      <p
+                        className="
+                          mt-1
+                          text-xs
+                          text-slate-500
+                        "
+                      >
+                        People who reached out
+                        to you
+                      </p>
                     </div>
 
-                    <div className="max-h-[420px] overflow-y-auto">
+                    <div
+                      className="
+                        max-h-[420px]
+                        overflow-y-auto
+                      "
+                    >
+
                       {notifications.length === 0 ? (
-                        <div className="px-6 py-10 text-center">
-                          <div className="text-4xl">🔔</div>
-                          <p className="mt-3 font-bold text-slate-700">No mentions or replies</p>
-                          <p className="mt-1 text-sm text-slate-400">You are all caught up.</p>
+
+                        <div
+                          className="
+                            px-6
+                            py-10
+                            text-center
+                          "
+                        >
+                          <div className="text-4xl">
+                            🔔
+                          </div>
+
+                          <p
+                            className="
+                              mt-3
+                              font-bold
+                              text-slate-700
+                            "
+                          >
+                            No mentions or replies
+                          </p>
+
+                          <p
+                            className="
+                              mt-1
+                              text-sm
+                              text-slate-400
+                            "
+                          >
+                            You are all caught up.
+                          </p>
                         </div>
+
                       ) : (
-                        notifications.map((notification) => {
-                          const message = notification.messages
-                          if (!message) return null
 
-                          return (
-                            <button
-                              key={notification.id}
-                              onClick={() => openNotification(notification)}
-                              className={`w-full border-b border-slate-100 px-5 py-4 text-left transition hover:bg-yellow-50 ${!notification.read ? "bg-yellow-50/50" : "bg-white"}`}
-                            >
-                              <div className="flex gap-3">
-                                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-yellow-400">
-                                  {message.profiles?.avatar_url ? (
-                                    <img src={message.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
-                                  ) : (
-                                    <div className="flex h-full w-full items-center justify-center font-bold text-slate-900">
-                                      {(message.profiles?.username?.[0] || "?").toUpperCase()}
-                                    </div>
-                                  )}
-                                </div>
+                        notifications.map(
+                          (notification) => {
+                            const message =
+                              notification.messages
 
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-slate-900">{message.profiles?.username || "Unknown"}</span>
-                                    {!notification.read && <span className="h-2 w-2 rounded-full bg-red-500" />}
+                            if (!message) {
+                              return null
+                            }
+
+                            const profile =
+                              message.profiles
+
+                            return (
+                              <button
+                                key={
+                                  notification.id
+                                }
+                                onClick={() =>
+                                  openNotification(
+                                    notification
+                                  )
+                                }
+                                className={`
+                                  w-full
+                                  border-b
+                                  border-slate-100
+                                  px-5
+                                  py-4
+                                  text-left
+                                  transition
+                                  hover:bg-yellow-50
+                                  ${
+                                    !notification.read
+                                      ? "bg-yellow-50/50"
+                                      : "bg-white"
+                                  }
+                                `}
+                              >
+
+                                <div
+                                  className="
+                                    flex
+                                    gap-3
+                                  "
+                                >
+
+                                  <div
+                                    className="
+                                      h-10
+                                      w-10
+                                      shrink-0
+                                      overflow-hidden
+                                      rounded-full
+                                      bg-yellow-400
+                                    "
+                                  >
+                                    {profile?.avatar_url ? (
+                                      <img
+                                        src={
+                                          profile.avatar_url
+                                        }
+                                        alt=""
+                                        className="
+                                          h-full
+                                          w-full
+                                          object-cover
+                                        "
+                                      />
+                                    ) : (
+                                      <div
+                                        className="
+                                          flex
+                                          h-full
+                                          w-full
+                                          items-center
+                                          justify-center
+                                          font-bold
+                                          text-slate-900
+                                        "
+                                      >
+                                        {(
+                                          profile?.username?.[0] ||
+                                          "?"
+                                        ).toUpperCase()}
+                                      </div>
+                                    )}
                                   </div>
-                                  <p className="mt-0.5 text-xs font-semibold text-yellow-600">
-                                    {notification.type === "mention" ? "Mentioned you" : "Replied to you"}
-                                  </p>
-                                  <p className="mt-1 line-clamp-2 text-sm text-slate-500">{message.content}</p>
+
+                                  <div
+                                    className="
+                                      min-w-0
+                                      flex-1
+                                    "
+                                  >
+
+                                    <div
+                                      className="
+                                        flex
+                                        items-center
+                                        gap-2
+                                      "
+                                    >
+                                      <span
+                                        className="
+                                          font-bold
+                                          text-slate-900
+                                        "
+                                      >
+                                        {profile?.username ||
+                                          "Unknown"}
+                                      </span>
+
+                                      {!notification.read && (
+                                        <span
+                                          className="
+                                            h-2
+                                            w-2
+                                            rounded-full
+                                            bg-red-500
+                                          "
+                                        />
+                                      )}
+                                    </div>
+
+                                    <p
+                                      className="
+                                        mt-0.5
+                                        text-xs
+                                        font-semibold
+                                        text-yellow-600
+                                      "
+                                    >
+                                      {notification.type ===
+                                      "mention"
+                                        ? "Mentioned you"
+                                        : "Replied to you"}
+                                    </p>
+
+                                    <p
+                                      className="
+                                        mt-1
+                                        line-clamp-2
+                                        text-sm
+                                        text-slate-500
+                                      "
+                                    >
+                                      {message.content}
+                                    </p>
+
+                                  </div>
+
                                 </div>
-                              </div>
-                            </button>
-                          )
-                        })
+
+                              </button>
+                            )
+                          }
+                        )
                       )}
+
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
+
             </div>
           </div>
         </div>
 
-        <div className="h-[520px] overflow-y-auto bg-white px-5 py-6 md:px-7">
+        {/* MESSAGES */}
+
+        <div
+          className="
+            h-[520px]
+            overflow-y-auto
+            bg-white
+            px-5
+            py-6
+            md:px-7
+          "
+        >
+
           {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center">
+
+            <div
+              className="
+                flex
+                h-full
+                items-center
+                justify-center
+              "
+            >
               <div className="text-center">
-                <div className="text-6xl">💬</div>
-                <h2 className="mt-4 text-2xl font-black text-slate-800">No messages yet</h2>
-                <p className="mt-2 text-slate-400">Be the first one to say something.</p>
+
+                <div className="text-6xl">
+                  💬
+                </div>
+
+                <h2
+                  className="
+                    mt-4
+                    text-2xl
+                    font-black
+                    text-slate-800
+                  "
+                >
+                  No messages yet
+                </h2>
+
+                <p
+                  className="
+                    mt-2
+                    text-slate-400
+                  "
+                >
+                  Be the first one to say
+                  something.
+                </p>
+
               </div>
             </div>
+
           ) : (
+
             <div className="space-y-4">
+
               {messages.map((message) => {
-                const ownMessage = message.user_id === user?.id
-                const repliedMessage = getReplyMessage(message.reply_to)
+
+                const ownMessage =
+                  message.user_id === user?.id
+
+                const repliedMessage =
+                  getReplyMessage(
+                    message.reply_to
+                  )
+
+                const profile =
+                  message.profiles
 
                 return (
                   <motion.div
                     key={message.id}
-                    ref={(element) => { messageRefs.current[message.id] = element }}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex gap-3 rounded-2xl transition-all duration-500 ${ownMessage ? "justify-end" : "justify-start"} ${highlightedMessage === message.id ? "bg-yellow-100/70 p-3" : ""}`}
+                    ref={(element) => {
+                      messageRefs.current[
+                        message.id
+                      ] = element
+                    }}
+                    initial={{
+                      opacity: 0,
+                      y: 8,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    className={`
+                      flex
+                      gap-3
+                      rounded-2xl
+                      transition-all
+                      duration-500
+                      ${
+                        ownMessage
+                          ? "justify-end"
+                          : "justify-start"
+                      }
+                      ${
+                        highlightedMessage ===
+                        message.id
+                          ? "bg-yellow-100/70 p-3"
+                          : ""
+                      }
+                    `}
                   >
+
+                    {/* AVATAR */}
+
                     {!ownMessage && (
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-slate-100">
-                        {message.profiles?.avatar_url ? (
-                          <img src={message.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
+
+                      <Link
+                        to={
+                          profile?.id
+                            ? `/profile/${profile.id}`
+                            : "#"
+                        }
+                        onClick={(e) => {
+                          if (!profile?.id) {
+                            e.preventDefault()
+                          }
+                        }}
+                        className="
+                          h-10
+                          w-10
+                          shrink-0
+                          overflow-hidden
+                          rounded-full
+                          ring-2
+                          ring-slate-100
+                          transition
+                          hover:ring-yellow-400
+                        "
+                      >
+
+                        {profile?.avatar_url ? (
+
+                          <img
+                            src={
+                              profile.avatar_url
+                            }
+                            alt=""
+                            className="
+                              h-full
+                              w-full
+                              object-cover
+                            "
+                          />
+
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-yellow-400 font-bold text-slate-900">
-                            {(message.profiles?.username?.[0] || "?").toUpperCase()}
+
+                          <div
+                            className="
+                              flex
+                              h-full
+                              w-full
+                              items-center
+                              justify-center
+                              bg-yellow-400
+                              font-bold
+                              text-slate-900
+                            "
+                          >
+                            {(
+                              profile?.username?.[0] ||
+                              "?"
+                            ).toUpperCase()}
                           </div>
+
                         )}
-                      </div>
+
+                      </Link>
                     )}
 
-                    <div className={`max-w-[75%] ${ownMessage ? "items-end" : "items-start"}`}>
+                    <div
+                      className={`
+                        max-w-[75%]
+                        ${
+                          ownMessage
+                            ? "items-end"
+                            : "items-start"
+                        }
+                      `}
+                    >
+
+                      {/* USERNAME */}
+
                       {!ownMessage && (
-                        <p className="mb-1 px-1 text-sm font-bold text-yellow-600">{message.profiles?.username || "Unknown"}</p>
+
+                        <Link
+                          to={
+                            profile?.id
+                              ? `/profile/${profile.id}`
+                              : "#"
+                          }
+                          onClick={(e) => {
+                            if (!profile?.id) {
+                              e.preventDefault()
+                            }
+                          }}
+                          className="
+                            mb-1
+                            block
+                            px-1
+                            text-sm
+                            font-bold
+                            text-yellow-600
+                            transition
+                            hover:text-yellow-700
+                            hover:underline
+                          "
+                        >
+                          {profile?.username ||
+                            "Unknown"}
+                        </Link>
+
                       )}
 
+                      {/* REPLY PREVIEW */}
+
                       {repliedMessage && (
+
                         <button
-                          onClick={() => messageRefs.current[repliedMessage.id]?.scrollIntoView({ behavior: "smooth", block: "center" })}
-                          className="mb-1 w-full rounded-xl border-l-4 border-yellow-400 bg-yellow-50 px-3 py-2 text-left text-xs text-slate-500 transition hover:bg-yellow-100"
+                          onClick={() => {
+                            const element =
+                              messageRefs.current[
+                                repliedMessage.id
+                              ]
+
+                            element?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center",
+                            })
+
+                            setHighlightedMessage(
+                              repliedMessage.id
+                            )
+
+                            setTimeout(() => {
+                              setHighlightedMessage(
+                                null
+                              )
+                            }, 1800)
+                          }}
+                          className="
+                            mb-1
+                            w-full
+                            rounded-xl
+                            border-l-4
+                            border-yellow-400
+                            bg-yellow-50
+                            px-3
+                            py-2
+                            text-left
+                            text-xs
+                            text-slate-500
+                            transition
+                            hover:bg-yellow-100
+                          "
                         >
-                          <span className="font-bold text-yellow-600">Replying to {repliedMessage.profiles?.username || "Unknown"}</span>
-                          <p className="mt-0.5 line-clamp-1">{repliedMessage.content}</p>
+
+                          <span
+                            className="
+                              font-bold
+                              text-yellow-600
+                            "
+                          >
+                            Replying to{" "}
+                            {repliedMessage.profiles
+                              ?.username ||
+                              "Unknown"}
+                          </span>
+
+                          <p
+                            className="
+                              mt-0.5
+                              line-clamp-1
+                            "
+                          >
+                            {repliedMessage.content}
+                          </p>
+
                         </button>
                       )}
 
-                      <div className={`rounded-2xl px-4 py-3 shadow-sm ${ownMessage ? "rounded-br-md bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900" : "rounded-bl-md border border-slate-200 bg-slate-50 text-slate-800"}`}>
-                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                      {/* MESSAGE BUBBLE */}
+
+                      <div
+                        className={`
+                          rounded-2xl
+                          px-4
+                          py-3
+                          shadow-sm
+                          ${
+                            ownMessage
+                              ? `
+                                rounded-br-md
+                                bg-gradient-to-r
+                                from-yellow-400
+                                to-amber-500
+                                text-slate-900
+                              `
+                              : `
+                                rounded-bl-md
+                                border
+                                border-slate-200
+                                bg-slate-50
+                                text-slate-800
+                              `
+                          }
+                        `}
+                      >
+
+                        <p
+                          className="
+                            whitespace-pre-wrap
+                            break-words
+                          "
+                        >
+                          {renderMessageContent(
+                            message.content
+                          )}
+                        </p>
+
                       </div>
 
-                      <div className={`mt-1 flex items-center gap-2 px-1 text-xs text-slate-400 ${ownMessage ? "justify-end" : ""}`}>
-                        <span>{new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                        <button onClick={() => startReply(message)} className="font-semibold text-slate-400 transition hover:text-yellow-600">Reply</button>
-                        {ownMessage && <button onClick={() => deleteMessage(message.id)} className="text-red-400 transition hover:text-red-500">Delete</button>}
+                      {/* ACTIONS */}
+
+                      <div
+                        className={`
+                          mt-1
+                          flex
+                          items-center
+                          gap-2
+                          px-1
+                          text-xs
+                          text-slate-400
+                          ${
+                            ownMessage
+                              ? "justify-end"
+                              : ""
+                          }
+                        `}
+                      >
+
+                        <span>
+                          {new Date(
+                            message.created_at
+                          ).toLocaleTimeString(
+                            [],
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
+                        </span>
+
+                        <button
+                          onClick={() =>
+                            startReply(message)
+                          }
+                          className="
+                            font-semibold
+                            text-slate-400
+                            transition
+                            hover:text-yellow-600
+                          "
+                        >
+                          Reply
+                        </button>
+
+                        {ownMessage && (
+
+                          <button
+                            onClick={() =>
+                              deleteMessage(
+                                message.id
+                              )
+                            }
+                            className="
+                              text-red-400
+                              transition
+                              hover:text-red-500
+                            "
+                          >
+                            Delete
+                          </button>
+
+                        )}
+
                       </div>
+
                     </div>
+
                   </motion.div>
                 )
               })}
+
               <div ref={bottomRef} />
+
             </div>
           )}
+
         </div>
 
-        <div className="border-t border-slate-200 bg-slate-50 p-5">
+        {/* INPUT */}
+
+        <div
+          className="
+            border-t
+            border-slate-200
+            bg-slate-50
+            p-5
+          "
+        >
+
+          {/* REPLY BAR */}
+
           <AnimatePresence>
             {replyTo && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-3 overflow-hidden">
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3">
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  height: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                  height: "auto",
+                }}
+                exit={{
+                  opacity: 0,
+                  height: 0,
+                }}
+                className="
+                  mb-3
+                  overflow-hidden
+                "
+              >
+                <div
+                  className="
+                    flex
+                    items-center
+                    justify-between
+                    gap-3
+                    rounded-2xl
+                    border
+                    border-yellow-200
+                    bg-yellow-50
+                    px-4
+                    py-3
+                  "
+                >
+
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-yellow-600">Replying to {replyTo.profiles?.username || "Unknown"}</p>
-                    <p className="mt-1 truncate text-sm text-slate-500">{replyTo.content}</p>
+
+                    <p
+                      className="
+                        text-xs
+                        font-bold
+                        text-yellow-600
+                      "
+                    >
+                      Replying to{" "}
+                      {replyTo.profiles?.username ||
+                        "Unknown"}
+                    </p>
+
+                    <p
+                      className="
+                        mt-1
+                        truncate
+                        text-sm
+                        text-slate-500
+                      "
+                    >
+                      {replyTo.content}
+                    </p>
+
                   </div>
-                  <button onClick={cancelReply} className="shrink-0 rounded-full px-3 py-1 text-sm font-bold text-slate-400 transition hover:bg-white hover:text-slate-700">×</button>
+
+                  <button
+                    onClick={cancelReply}
+                    className="
+                      shrink-0
+                      rounded-full
+                      px-3
+                      py-1
+                      text-sm
+                      font-bold
+                      text-slate-400
+                      transition
+                      hover:bg-white
+                      hover:text-slate-700
+                    "
+                  >
+                    ×
+                  </button>
+
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
           <div className="relative flex gap-3">
+
+            {/* MENTION SUGGESTIONS */}
+
             <AnimatePresence>
-              {showMentionList && mentionUsers.length > 0 && (
+              {showMentionList &&
+                mentionUsers.length > 0 && (
+
                 <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                  className="absolute bottom-full left-0 z-[100] mb-3 w-[320px] max-w-[calc(100vw-40px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,.18)]"
+                  initial={{
+                    opacity: 0,
+                    y: 8,
+                    scale: 0.98,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: 8,
+                    scale: 0.98,
+                  }}
+                  className="
+                    absolute
+                    bottom-full
+                    left-0
+                    z-50
+                    mb-3
+                    w-[320px]
+                    max-w-[calc(100vw-40px)]
+                    overflow-hidden
+                    rounded-2xl
+                    border
+                    border-slate-200
+                    bg-white
+                    shadow-[0_20px_60px_rgba(15,23,42,.18)]
+                  "
                 >
-                  <div className="border-b border-slate-100 px-4 py-3">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Mention someone</p>
+
+                  <div
+                    className="
+                      border-b
+                      border-slate-100
+                      px-4
+                      py-3
+                    "
+                  >
+                    <p
+                      className="
+                        text-xs
+                        font-bold
+                        uppercase
+                        tracking-wider
+                        text-slate-400
+                      "
+                    >
+                      Mention someone
+                    </p>
                   </div>
 
-                  <div className="max-h-[280px] overflow-y-auto p-2">
-                    {mentionUsers.map((profile) => (
+                  <div
+                    className="
+                      max-h-[280px]
+                      overflow-y-auto
+                      p-2
+                    "
+                  >
+
+                    {mentionUsers.map(
+                      (mentionProfile) => (
+
                       <button
-                        key={profile.id}
+                        key={
+                          mentionProfile.id
+                        }
                         type="button"
-                        onMouseDown={(e) => { e.preventDefault(); selectMention(profile) }}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-yellow-50"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+
+                          selectMention(
+                            mentionProfile
+                          )
+                        }}
+                        className="
+                          flex
+                          w-full
+                          items-center
+                          gap-3
+                          rounded-xl
+                          px-3
+                          py-2.5
+                          text-left
+                          transition
+                          hover:bg-yellow-50
+                        "
                       >
-                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-yellow-400 ring-1 ring-slate-200">
-                          {profile.avatar_url ? (
-                            <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+
+                        <div
+                          className="
+                            h-10
+                            w-10
+                            shrink-0
+                            overflow-hidden
+                            rounded-full
+                            bg-yellow-400
+                            ring-1
+                            ring-slate-200
+                          "
+                        >
+
+                          {mentionProfile.avatar_url ? (
+
+                            <img
+                              src={
+                                mentionProfile.avatar_url
+                              }
+                              alt=""
+                              className="
+                                h-full
+                                w-full
+                                object-cover
+                              "
+                            />
+
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center font-bold text-slate-900">
-                              {(profile.username?.[0] || "?").toUpperCase()}
+
+                            <div
+                              className="
+                                flex
+                                h-full
+                                w-full
+                                items-center
+                                justify-center
+                                font-bold
+                                text-slate-900
+                              "
+                            >
+                              {(
+                                mentionProfile
+                                  .username?.[0] ||
+                                "?"
+                              ).toUpperCase()}
                             </div>
+
                           )}
+
                         </div>
-                        <div className="min-w-0">
-                          <p className="truncate font-bold text-slate-900">@{profile.username}</p>
-                          <p className="text-xs text-slate-400">Mention this user</p>
+
+                        <div
+                          className="
+                            min-w-0
+                          "
+                        >
+
+                          <p
+                            className="
+                              truncate
+                              font-bold
+                              text-slate-900
+                            "
+                          >
+                            @{mentionProfile.username}
+                          </p>
+
+                          <p
+                            className="
+                              text-xs
+                              text-slate-400
+                            "
+                          >
+                            Mention this user
+                          </p>
+
                         </div>
+
                       </button>
                     ))}
+
                   </div>
+
                 </motion.div>
               )}
             </AnimatePresence>
 
             <textarea
-              ref={inputRef}
               id="message-input"
               value={text}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
               rows={2}
-              placeholder={replyTo ? "Write a reply..." : "Write a message... Use @ to mention someone"}
-              className="min-w-0 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/10"
+              placeholder={
+                replyTo
+                  ? "Write a reply..."
+                  : "Write a message... Use @username to mention someone"
+              }
+              className="
+                min-w-0
+                flex-1
+                resize-none
+                rounded-2xl
+                border
+                border-slate-200
+                bg-white
+                px-5
+                py-4
+                text-slate-800
+                shadow-sm
+                outline-none
+                transition
+                placeholder:text-slate-400
+                focus:border-yellow-400
+                focus:ring-4
+                focus:ring-yellow-400/10
+              "
             />
 
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{
+                scale: 1.03,
+              }}
+              whileTap={{
+                scale: 0.97,
+              }}
               onClick={sendMessage}
-              disabled={sending || !text.trim()}
-              className="self-end rounded-2xl bg-gradient-to-r from-yellow-400 to-amber-500 px-7 py-4 font-black text-slate-900 shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={
+                sending ||
+                !text.trim()
+              }
+              className="
+                self-end
+                rounded-2xl
+                bg-gradient-to-r
+                from-yellow-400
+                to-amber-500
+                px-7
+                py-4
+                font-black
+                text-slate-900
+                shadow-sm
+                transition
+                hover:shadow-md
+                disabled:cursor-not-allowed
+                disabled:opacity-40
+              "
             >
-              {sending ? "..." : "Send"}
+              {sending
+                ? "..."
+                : "Send"}
             </motion.button>
+
           </div>
 
-          <p className="mt-2 text-xs text-slate-400">Enter to send · Shift + Enter for a new line · @ to mention</p>
+          <p
+            className="
+              mt-2
+              text-xs
+              text-slate-400
+            "
+          >
+            Enter to send · Shift + Enter
+            for a new line · @username to
+            mention
+          </p>
+
         </div>
+
       </div>
     </motion.div>
   )
