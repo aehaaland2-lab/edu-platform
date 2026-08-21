@@ -61,30 +61,25 @@ export default function Layout({ user, logout, children }) {
 
       {/* Sidebar */}
       <motion.aside
-        initial={false}
-        animate={{
-          x: mobileMenu ? 0 : -320,
-        }}
-        transition={{
-          duration: 0.25,
-        }}
-        className="
-          fixed
-          left-0
-          top-0
-          z-50
-          flex
-          h-screen
-          w-72
-          flex-col
-          border-r
-          border-slate-200
-          bg-white
-          p-6
-          shadow-[10px_0_40px_rgba(15,23,42,0.04)]
-          lg:translate-x-0
-        "
-      >
+  initial={false}
+  className="
+    fixed
+    left-0
+    top-0
+    z-50
+    flex
+    h-screen
+    w-72
+    flex-col
+    border-r
+    border-slate-200
+    bg-white
+    p-6
+    shadow-[10px_0_40px_rgba(15,23,42,0.04)]
+    -translate-x-full
+    lg:translate-x-0
+  "
+>
 
         {/* Logo */}
         <div className="px-2">
