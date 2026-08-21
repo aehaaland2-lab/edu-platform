@@ -254,8 +254,12 @@ setSections([
         rounded-3xl
         border
         border-white/10
-        bg-[#0F1117]
+        bg-gradient-to-br
+        from-slate-50
+        via-white
+        to-amber-50/40
         p-6
+        shadow-sm
       "
     >
       <input
