@@ -415,7 +415,7 @@ export default function Messages() {
       return (
         <Link
           key={index}
-          to={`/profile/username/${encodeURIComponent(username)}`}
+          to={`/profile/${profile.id}`}
           className="
             font-bold
             text-yellow-700
