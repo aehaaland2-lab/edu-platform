@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import Profile from "./pages/Profile"
 import EditProfile from "./pages/EditProfile"
@@ -24,11 +24,15 @@ export default function App() {
   const [profileExists, setProfileExists] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const profileCheckId = useRef(0)
+
   const logout = async () => {
     await supabase.auth.signOut()
   }
 
   async function checkProfile(currentUser) {
+    const checkId = ++profileCheckId.current
+
     if (!currentUser) {
       setProfileExists(null)
       return
@@ -40,6 +44,10 @@ export default function App() {
       .eq("id", currentUser.id)
       .maybeSingle()
 
+    if (checkId !== profileCheckId.current) {
+      return
+    }
+
     if (error) {
       console.error("Profile check error:", error)
       setProfileExists(false)
@@ -50,13 +58,31 @@ export default function App() {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const currentUser = data.session?.user || null
+    let mounted = true
+
+    async function initialize() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!mounted) return
+
+      const currentUser = session?.user || null
 
       setUser(currentUser)
-      checkProfile(currentUser)
-      setLoading(false)
-    })
+
+      if (currentUser) {
+        await checkProfile(currentUser)
+      } else {
+        setProfileExists(null)
+      }
+
+      if (mounted) {
+        setLoading(false)
+      }
+    }
+
+    initialize()
 
     const {
       data: { subscription },
@@ -64,10 +90,12 @@ export default function App() {
       const currentUser = session?.user || null
 
       setUser(currentUser)
+
       checkProfile(currentUser)
     })
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
   }, [])
