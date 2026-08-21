@@ -237,34 +237,35 @@ export default function PostCard({ post, deletePost, user }) {
           {/* POST IMAGE */}
 
           {post.image_url && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="
-                mt-5
-                overflow-hidden
-                rounded-3xl
-                border
-                border-slate-200
-                bg-slate-100
-              "
-            >
-              <img
-                src={post.image_url}
-                alt={post.title || "Post image"}
-                className="
-                  block
-                  max-h-[600px]
-                  w-full
-                  object-cover
-                  transition-transform
-                  duration-500
-                  group-hover:scale-[1.01]
-                "
-              />
-            </motion.div>
-          )}
+  <motion.div
+    initial={{ opacity: 0, scale: 0.98 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ duration: 0.3 }}
+    className="
+      mt-5
+      flex
+      max-h-[420px]
+      w-full
+      items-center
+      justify-center
+      overflow-hidden
+      rounded-3xl
+      border
+      border-slate-200
+      bg-slate-100
+    "
+  >
+    <img
+      src={post.image_url}
+      alt={post.title || "Post image"}
+      className="
+        max-h-[420px]
+        max-w-full
+        object-contain
+      "
+    />
+  </motion.div>
+)}
 
           {/* SECTIONS */}
 
