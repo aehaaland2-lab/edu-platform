@@ -23,6 +23,11 @@ export default function EditProfile() {
       data: { user },
     } = await supabase.auth.getUser()
 
+    if (!user) {
+      navigate("/login")
+      return
+    }
+
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -48,6 +53,8 @@ export default function EditProfile() {
     const {
       data: { user },
     } = await supabase.auth.getUser()
+
+    if (!user) return
 
     const ext = file.name.split(".").pop()
 
@@ -84,6 +91,11 @@ export default function EditProfile() {
       data: { user },
     } = await supabase.auth.getUser()
 
+    if (!user) {
+      setSaving(false)
+      return
+    }
+
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -105,64 +117,43 @@ export default function EditProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Loading...
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <div className="text-slate-500">
+          Loading...
+        </div>
       </div>
     )
   }
 
   return (
-        <div className="min-h-screen bg-[#09090B] text-white flex items-center justify-center overflow-hidden relative">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-auto max-w-5xl pb-20"
+    >
+      {/* HEADER */}
 
-      <motion.div
-        animate={{
-          x: [0, 40, 0],
-          y: [0, 30, 0],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="
-          absolute
-          top-[-250px]
-          left-[-200px]
-          h-[550px]
-          w-[550px]
-          rounded-full
-          bg-yellow-400/10
-          blur-[170px]
-        "
-      />
+      <div className="mb-8">
+        <p className="text-sm uppercase tracking-[0.3em] text-yellow-500">
+          Account
+        </p>
 
-      <motion.div
-        animate={{
-          x: [0, -40, 0],
-          y: [0, -35, 0],
-        }}
-        transition={{
-          duration: 12,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="
-          absolute
-          bottom-[-220px]
-          right-[-180px]
-          h-[520px]
-          w-[520px]
-          rounded-full
-          bg-violet-600/10
-          blur-[180px]
-        "
-      />
+        <h1 className="mt-2 text-5xl font-black text-slate-900">
+          Edit Profile
+        </h1>
+
+        <p className="mt-3 text-lg text-slate-500">
+          Customize your profile and personal information.
+        </p>
+      </div>
+
+      {/* CARD */}
 
       <motion.div
         initial={{
           opacity: 0,
-          y: 30,
-          scale: .97,
+          y: 20,
+          scale: 0.98,
         }}
         animate={{
           opacity: 1,
@@ -170,188 +161,233 @@ export default function EditProfile() {
           scale: 1,
         }}
         transition={{
-          duration: .45,
+          duration: 0.45,
         }}
         className="
           relative
-          w-[700px]
+          overflow-hidden
           rounded-[36px]
           border
-          border-white/10
-          bg-white/5
-          backdrop-blur-2xl
-          overflow-hidden
-          shadow-[0_40px_120px_rgba(0,0,0,.45)]
+          border-slate-200
+          bg-white
+          shadow-[0_30px_100px_rgba(15,23,42,.10)]
         "
       >
+        {/* decorative background */}
 
-        <div className="h-36 bg-gradient-to-r from-yellow-500/20 via-amber-400/10 to-violet-600/20"/>
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-yellow-300/20 blur-[100px]" />
 
-        <div className="px-10 pb-10">
+        <div className="absolute -bottom-28 -left-24 h-72 w-72 rounded-full bg-violet-300/15 blur-[110px]" />
+
+        {/* TOP BANNER */}
+
+        <div className="relative h-36 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-yellow-200 via-amber-100 to-sky-100" />
+
+          <div className="absolute -right-10 -top-20 h-64 w-64 rounded-full bg-yellow-300/30 blur-[70px]" />
+
+          <div className="absolute -left-10 -bottom-32 h-64 w-64 rounded-full bg-violet-300/20 blur-[70px]" />
+        </div>
+
+        <div className="relative px-8 pb-10 md:px-12">
+          {/* AVATAR */}
 
           <div className="-mt-16 flex flex-col items-center">
-
             <div className="relative">
-
-              <div className="h-36 w-36 rounded-full overflow-hidden ring-4 ring-[#09090B] bg-[#151515]">
-
+              <motion.div
+                whileHover={{ scale: 1.03 }}
+                className="
+                  h-36
+                  w-36
+                  overflow-hidden
+                  rounded-full
+                  border-4
+                  border-white
+                  bg-gradient-to-br
+                  from-yellow-400
+                  to-amber-500
+                  shadow-[0_15px_40px_rgba(15,23,42,.15)]
+                "
+              >
                 {preview ? (
-
                   <img
                     src={preview}
                     className="h-full w-full object-cover"
                     alt=""
                   />
-
                 ) : (
-
-                  <div className="h-full w-full flex items-center justify-center text-6xl">
-                    👤
+                  <div className="flex h-full w-full items-center justify-center text-6xl font-bold text-white">
+                    {username?.[0]?.toUpperCase() || "?"}
                   </div>
-
                 )}
-
-              </div>
+              </motion.div>
 
               <label
                 className="
-                absolute
-                bottom-2
-                right-2
-                cursor-pointer
-                rounded-full
-                bg-yellow-400
-                p-3
-                text-black
-                shadow-xl
-                hover:scale-110
-                transition
+                  absolute
+                  bottom-1
+                  right-1
+                  flex
+                  h-11
+                  w-11
+                  cursor-pointer
+                  items-center
+                  justify-center
+                  rounded-full
+                  border-4
+                  border-white
+                  bg-yellow-400
+                  text-xl
+                  text-black
+                  shadow-lg
+                  transition
+                  hover:scale-110
                 "
+                title="Change avatar"
               >
-                📷
-
+                +
                 <input
                   hidden
                   type="file"
                   accept="image/*"
-                  onChange={(e)=>{
+                  onChange={(e) => {
                     uploadAvatar(e.target.files?.[0])
                   }}
                 />
-
               </label>
-
             </div>
 
-            <h1 className="mt-6 text-4xl font-black">
-              Edit Profile
-            </h1>
+            <h2 className="mt-6 text-3xl font-black text-slate-900">
+              {username || "Your Profile"}
+            </h2>
 
-            <p className="mt-2 text-slate-400">
-              Customize your account.
+            <p className="mt-1 text-slate-400">
+              Update your personal information
             </p>
+          </div>
 
-            <div className="mt-10 w-full space-y-5">
-                          <div>
+          {/* FORM */}
 
-                <p className="mb-2 text-sm text-slate-400">
-                  Username
-                </p>
+          <div className="mx-auto mt-10 max-w-3xl space-y-6">
+            <div>
+              <p className="mb-2 text-sm font-semibold text-slate-500">
+                Username
+              </p>
 
-                <input
-                  value={username}
-                  onChange={(e)=>setUsername(e.target.value)}
-                  placeholder="Username"
-                  className="
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
+                className="
                   w-full
                   rounded-2xl
                   border
-                  border-white/10
-                  bg-black/30
+                  border-slate-200
+                  bg-slate-50
                   px-5
                   py-4
+                  text-slate-900
                   outline-none
                   transition-all
                   duration-300
+                  placeholder:text-slate-400
                   focus:border-yellow-400
-                  "
-                />
+                  focus:bg-white
+                  focus:ring-4
+                  focus:ring-yellow-400/10
+                "
+              />
+            </div>
 
-              </div>
-
-              <div>
-
-                <p className="mb-2 text-sm text-slate-400">
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-500">
                   Bio
                 </p>
 
-                <textarea
-                  rows={5}
-                  value={bio}
-                  onChange={(e)=>setBio(e.target.value)}
-                  placeholder="Tell something about yourself..."
-                  className="
+                <span className="text-xs text-slate-400">
+                  {bio.length}/300
+                </span>
+              </div>
+
+              <textarea
+                rows={5}
+                maxLength={300}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell something about yourself..."
+                className="
                   w-full
+                  resize-none
                   rounded-2xl
                   border
-                  border-white/10
-                  bg-black/30
+                  border-slate-200
+                  bg-slate-50
                   px-5
                   py-4
-                  resize-none
+                  text-slate-900
                   outline-none
                   transition-all
                   duration-300
+                  placeholder:text-slate-400
                   focus:border-yellow-400
-                  "
-                />
-
-              </div>
-
-              <motion.button
-
-                whileHover={{
-                  scale:1.02,
-                }}
-
-                whileTap={{
-                  scale:.98,
-                }}
-
-                onClick={save}
-
-                disabled={saving}
-
-                className="
-                w-full
-                rounded-2xl
-                bg-gradient-to-r
-                from-yellow-400
-                to-amber-500
-                py-4
-                font-bold
-                text-black
-                shadow-[0_15px_40px_rgba(250,204,21,.25)]
-                disabled:opacity-60
+                  focus:bg-white
+                  focus:ring-4
+                  focus:ring-yellow-400/10
                 "
-              >
-
-                {saving
-                  ? "Saving..."
-                  : "Save Changes"}
-
-              </motion.button>
-
+              />
             </div>
 
+            {/* BUTTONS */}
+
+            <div className="flex flex-col-reverse gap-3 pt-3 sm:flex-row sm:justify-end">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate(-1)}
+                className="
+                  rounded-2xl
+                  border
+                  border-slate-200
+                  bg-slate-50
+                  px-7
+                  py-4
+                  font-bold
+                  text-slate-700
+                  transition
+                  hover:bg-slate-100
+                "
+              >
+                Cancel
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={save}
+                disabled={saving}
+                className="
+                  rounded-2xl
+                  bg-gradient-to-r
+                  from-yellow-400
+                  to-amber-500
+                  px-8
+                  py-4
+                  font-black
+                  text-black
+                  shadow-[0_15px_35px_rgba(250,204,21,.25)]
+                  transition
+                  hover:shadow-[0_18px_45px_rgba(250,204,21,.35)]
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
+                "
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </motion.button>
+            </div>
           </div>
-
         </div>
-
       </motion.div>
-
-    </div>
-
+    </motion.div>
   )
-
 }
