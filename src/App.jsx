@@ -13,7 +13,6 @@ import Auth from "./pages/Auth"
 import Feed from "./pages/Feed"
 import Tests from "./pages/Tests"
 import Leaderboard from "./pages/Leaderboard"
-import LoadingScreen from "./components/LoadingScreen"
 
 function Messages() {
   return <h1 className="text-white text-2xl">Messages</h1>
@@ -23,7 +22,6 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [profileExists, setProfileExists] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [showLoader, setShowLoader] = useState(true)
 
   const logout = async () => {
     await supabase.auth.signOut()
@@ -56,9 +54,6 @@ setProfileExists(!!data)
 setUser(currentUser)
 checkProfile(currentUser)
       setLoading(false)
-      setTimeout(() => {
-        setShowLoader(false)
-      }, 2500)
     })
 
     const {
@@ -74,12 +69,11 @@ checkProfile(currentUser)
   }, [])
 
   if (loading) {
-    return showLoader ? <LoadingScreen /> : null
-  }
+  return null
+}
 
   return (
     <>
-      {showLoader && <LoadingScreen />}
 
       <Routes>
       <Route path="/auth" element={<Auth />} />
@@ -92,9 +86,7 @@ checkProfile(currentUser)
         path="/*"
         element={
           user ? (
-  profileExists === null ? (
-    <LoadingScreen />
-  ) : profileExists ? (
+  profileExists ? (
     <Layout user={user} logout={logout}>
       <Routes>
         <Route path="/" element={<Feed />} />
