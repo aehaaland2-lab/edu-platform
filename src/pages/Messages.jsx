@@ -13,6 +13,10 @@ export default function Messages() {
 
   const [replyTo, setReplyTo] = useState(null)
   const [highlightedMessage, setHighlightedMessage] = useState(null)
+  const [mentionUsers, setMentionUsers] = useState([])
+const [showMentionList, setShowMentionList] = useState(false)
+const [mentionQuery, setMentionQuery] = useState("")
+const [mentionStart, setMentionStart] = useState(-1)
 
   const bottomRef = useRef(null)
   const messageRefs = useRef({})
@@ -148,6 +152,32 @@ export default function Messages() {
     (notification) => !notification.read
   ).length
 
+  async function searchMentionUsers(query) {
+  const cleanQuery = query.trim()
+
+  let request = supabase
+    .from("profiles")
+    .select("id, username, avatar_url")
+    .not("id", "eq", user?.id)
+    .limit(8)
+
+  if (cleanQuery) {
+    request = request.ilike(
+      "username",
+      `%${cleanQuery}%`
+    )
+  }
+
+  const { data, error } = await request
+
+  if (error) {
+    console.error(error)
+    return
+  }
+
+  setMentionUsers(data || [])
+  setShowMentionList(true)
+}
   async function sendMessage() {
     if (!text.trim() || !user || sending) return
 
@@ -294,6 +324,69 @@ export default function Messages() {
     setReplyTo(null)
   }
 
+
+  function handleTextChange(e) {
+  const value = e.target.value
+
+  setText(value)
+
+  const cursorPosition = e.target.selectionStart
+
+  const textBeforeCursor = value.slice(
+    0,
+    cursorPosition
+  )
+
+  const match = textBeforeCursor.match(
+    /(^|\s)@([a-zA-Z0-9_.-]*)$/
+  )
+
+  if (!match) {
+    setShowMentionList(false)
+    setMentionQuery("")
+    setMentionStart(-1)
+    return
+  }
+
+  const query = match[2]
+
+  const start =
+    cursorPosition - query.length - 1
+
+  setMentionQuery(query)
+  setMentionStart(start)
+
+  searchMentionUsers(query)
+}
+function selectMention(profile) {
+  if (mentionStart === -1) return
+
+  const before = text.slice(
+    0,
+    mentionStart
+  )
+
+  const after = text.slice(
+    mentionStart + mentionQuery.length + 1
+  )
+
+  const newText =
+    before +
+    `@${profile.username} ` +
+    after
+
+  setText(newText)
+
+  setShowMentionList(false)
+  setMentionQuery("")
+  setMentionStart(-1)
+
+  setTimeout(() => {
+    document
+      .querySelector("#message-input")
+      ?.focus()
+  }, 50)
+}
   function handleKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -981,14 +1074,172 @@ export default function Messages() {
             )}
           </AnimatePresence>
 
-          <div className="flex gap-3">
+          <div className="relative flex gap-3">
+
+  {showMentionList && mentionUsers.length > 0 && (
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: 8,
+        scale: 0.98,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        scale: 1,
+      }}
+      className="
+        absolute
+        bottom-full
+        left-0
+        z-50
+        mb-3
+        w-[320px]
+        max-w-[calc(100vw-40px)]
+        overflow-hidden
+        rounded-2xl
+        border
+        border-slate-200
+        bg-white
+        shadow-[0_20px_60px_rgba(15,23,42,.18)]
+      "
+    >
+
+      <div className="border-b border-slate-100 px-4 py-3">
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          Mention someone
+        </p>
+      </div>
+
+      <div className="max-h-[280px] overflow-y-auto p-2">
+
+        {mentionUsers.map((profile) => (
+
+          <button
+            key={profile.id}
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              selectMention(profile)
+            }}
+            className="
+              flex
+              w-full
+              items-center
+              gap-3
+              rounded-xl
+              px-3
+              py-2.5
+              text-left
+              transition
+              hover:bg-yellow-50
+            "
+          >
+
+            <div
+              className="
+                h-10
+                w-10
+                shrink-0
+                overflow-hidden
+                rounded-full
+                bg-yellow-400
+                ring-1
+                ring-slate-200
+              "
+            >
+
+              {profile.avatar_url ? (
+
+                <img
+                  src={profile.avatar_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+
+              ) : (
+
+                <div
+                  className="
+                    flex
+                    h-full
+                    w-full
+                    items-center
+                    justify-center
+                    font-bold
+                    text-slate-900
+                  "
+                >
+                  {(
+                    profile.username?.[0] || "?"
+                  ).toUpperCase()}
+                </div>
+
+              )}
+
+            </div>
+
+            <div className="min-w-0">
+
+              <p className="truncate font-bold text-slate-900">
+                @{profile.username}
+              </p>
+
+              <p className="text-xs text-slate-400">
+                Mention this user
+              </p>
+
+            </div>
+
+          </button>
+
+        ))}
+
+      </div>
+
+    </motion.div>
+  )}
+
+  <textarea
+    id="message-input"
+    value={text}
+    onChange={handleTextChange}
+    onKeyDown={handleKeyDown}
+    rows={2}
+    placeholder={
+      replyTo
+        ? "Write a reply..."
+        : "Write a message... Use @username to mention someone"
+    }
+    className="
+      min-w-0
+      flex-1
+      resize-none
+      rounded-2xl
+      border
+      border-slate-200
+      bg-white
+      px-5
+      py-4
+      text-slate-800
+      shadow-sm
+      outline-none
+      transition
+      placeholder:text-slate-400
+      focus:border-yellow-400
+      focus:ring-4
+      focus:ring-yellow-400/10
+    "
+  />
+
+  {/* твоя кнопка Send остаётся здесь */}
+
+</div>
 
             <textarea
               id="message-input"
               value={text}
-              onChange={(e) =>
-                setText(e.target.value)
-              }
+              onChange={handleTextChange}
               onKeyDown={handleKeyDown}
               rows={2}
               placeholder={
