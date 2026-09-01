@@ -40,7 +40,6 @@ export default function Layout({ user, logout, children }) {
           shadow-sm
           transition
           hover:shadow-md
-          lg:hidden
         "
       >
         ☰
@@ -54,7 +53,7 @@ export default function Layout({ user, logout, children }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setMobileMenu(false)}
-            className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm "
           />
         )}
       </AnimatePresence>
@@ -83,7 +82,6 @@ export default function Layout({ user, logout, children }) {
     bg-white
     p-6
     shadow-[10px_0_40px_rgba(15,23,42,0.04)]
-    lg:translate-x-0
   "
 >
 
