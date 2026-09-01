@@ -62,6 +62,13 @@ export default function Layout({ user, logout, children }) {
       {/* Sidebar */}
       <motion.aside
   initial={false}
+  animate={{
+    x: mobileMenu ? 0 : "-100%",
+  }}
+  transition={{
+    duration: 0.25,
+    ease: "easeOut",
+  }}
   className="
     fixed
     left-0
@@ -76,7 +83,6 @@ export default function Layout({ user, logout, children }) {
     bg-white
     p-6
     shadow-[10px_0_40px_rgba(15,23,42,0.04)]
-    -translate-x-full
     lg:translate-x-0
   "
 >
