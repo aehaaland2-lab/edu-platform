@@ -15,6 +15,7 @@ import Tests from "./pages/Tests"
 import Leaderboard from "./pages/Leaderboard"
 
 import { supabase } from "./supabase"
+import { LanguageProvider } from "./LanguageContext"
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -102,39 +103,55 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/auth" element={<Auth />} />
+    <LanguageProvider>
+      <Routes>
+        <Route path="/auth" element={<Auth />} />
 
-      <Route path="/profile/:id" element={<Profile />} />
-      <Route path="/edit-profile" element={<EditProfile />} />
+        <Route
+          path="/profile/:id"
+          element={
+            <Layout user={user} logout={logout}>
+              <Profile />
+            </Layout>
+          }
+        />
+        <Route
+          path="/edit-profile"
+          element={
+            <Layout user={user} logout={logout}>
+              <EditProfile />
+            </Layout>
+          }
+        />
 
-      <Route path="/test/editor/:id" element={<TestEditor />} />
-      <Route path="/test/play/:id" element={<PlayTest />} />
+        <Route path="/test/editor/:id" element={<TestEditor />} />
+        <Route path="/test/play/:id" element={<PlayTest />} />
 
-      <Route path="/complete-profile" element={<CompleteProfile />} />
+        <Route path="/complete-profile" element={<CompleteProfile />} />
 
-      <Route
-        path="/*"
-        element={
-          user ? (
-            profileExists ? (
-              <Layout user={user} logout={logout}>
-                <Routes>
-                  <Route path="/" element={<Feed />} />
-                  <Route path="/tests" element={<Tests />} />
-                  <Route path="/leaderboard" element={<Leaderboard />} />
-                  <Route path="/messages" element={<Messages />} />
-                  <Route path="/profile" element={<Profile />} />
-                </Routes>
-              </Layout>
+        <Route
+          path="/*"
+          element={
+            user ? (
+              profileExists ? (
+                <Layout user={user} logout={logout}>
+                  <Routes>
+                    <Route path="/" element={<Feed />} />
+                    <Route path="/tests" element={<Tests />} />
+                    <Route path="/leaderboard" element={<Leaderboard />} />
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="/profile" element={<Profile />} />
+                  </Routes>
+                </Layout>
+              ) : (
+                <Navigate to="/complete-profile" replace />
+              )
             ) : (
-              <Navigate to="/complete-profile" replace />
+              <Navigate to="/auth" replace />
             )
-          ) : (
-            <Navigate to="/auth" replace />
-          )
-        }
-      />
-    </Routes>
+          }
+        />
+      </Routes>
+    </LanguageProvider>
   )
 }

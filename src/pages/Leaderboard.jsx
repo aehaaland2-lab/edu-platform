@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react"
 import { supabase } from "../supabase"
 import { motion } from "framer-motion"
+import { useLanguage } from "../LanguageContext"
 
 export default function Leaderboard() {
+  const { t } = useLanguage()
+
   const [users, setUsers] = useState([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
@@ -39,7 +42,6 @@ export default function Leaderboard() {
       animate={{ opacity: 1, y: 0 }}
       className="pb-20"
     >
-      {/* Header */}
       <div
         className="
           relative
@@ -84,18 +86,17 @@ export default function Leaderboard() {
 
         <div className="relative z-10">
           <p className="text-yellow-600 uppercase tracking-[0.35em] text-sm font-bold">
-            Community
+            {t.community}
           </p>
 
           <h1 className="mt-3 text-5xl font-black tracking-tight text-slate-950">
-            Leaderboard
+            {t.leaderboardTitle}
           </h1>
 
           <p className="mt-3 text-slate-500 text-lg">
-            Top students ranked by XP.
+            {t.leaderboardSubtitle}
           </p>
 
-          {/* Search */}
           <div className="relative mt-8">
             <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-lg">
               🔎
@@ -104,7 +105,7 @@ export default function Leaderboard() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search students..."
+              placeholder={t.searchStudentsPlaceholder}
               className="
                 w-full
                 rounded-2xl
@@ -130,37 +131,14 @@ export default function Leaderboard() {
         </div>
       </div>
 
-      {/* Users */}
       <div className="space-y-3">
         {loading ? (
-          <div
-            className="
-              rounded-2xl
-              border
-              border-slate-200
-              bg-white
-              py-10
-              text-center
-              text-slate-500
-              shadow-sm
-            "
-          >
-            Loading leaderboard...
+          <div className="rounded-2xl border border-slate-200 bg-white py-10 text-center text-slate-500 shadow-sm">
+            {t.loadingLeaderboard}
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div
-            className="
-              rounded-2xl
-              border
-              border-slate-200
-              bg-white
-              py-10
-              text-center
-              text-slate-500
-              shadow-sm
-            "
-          >
-            No students found.
+          <div className="rounded-2xl border border-slate-200 bg-white py-10 text-center text-slate-500 shadow-sm">
+            {t.noStudentsFound}
           </div>
         ) : (
           filteredUsers.map((profile) => {
@@ -200,7 +178,6 @@ export default function Leaderboard() {
                   }
                 `}
               >
-                {/* Rank */}
                 <div
                   className={`
                     flex
@@ -223,16 +200,9 @@ export default function Leaderboard() {
                     }
                   `}
                 >
-                  {isFirst
-                    ? "1"
-                    : isSecond
-                      ? "2"
-                      : isThird
-                        ? "3"
-                        : rank}
+                  {rank}
                 </div>
 
-                {/* Avatar */}
                 <div
                   className={`
                     h-12
@@ -267,24 +237,22 @@ export default function Leaderboard() {
                   )}
                 </div>
 
-                {/* Username */}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-lg font-bold text-slate-900">
-                    {profile.username || "Unknown User"}
+                    {profile.username || t.unknownUser}
                   </p>
 
                   {rank <= 3 && (
                     <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
                       {isFirst
-                        ? "Top student"
+                        ? t.topStudent
                         : isSecond
-                          ? "Second place"
-                          : "Third place"}
+                          ? t.secondPlace
+                          : t.thirdPlace}
                     </p>
                   )}
                 </div>
 
-                {/* XP */}
                 <div
                   className={`
                     shrink-0

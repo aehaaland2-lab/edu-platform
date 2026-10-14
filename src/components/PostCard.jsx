@@ -3,52 +3,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useEffect, useState } from "react"
 import { supabase } from "../supabase"
 import CommentSection from "./CommentSection"
+import { useLanguage } from "../LanguageContext"
 
-// Справочник уроков (предметов) со значками и стилями бейджей
-export const SUBJECTS = {
-  Математика: {
-    icon: "📐",
-    badge: "border-blue-200 bg-blue-50 text-blue-700",
-  },
-  Физика: {
-    icon: "⚛️",
-    badge: "border-violet-200 bg-violet-50 text-violet-700",
-  },
-  Информатика: {
-    icon: "💻",
-    badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  },
-  Химия: {
-    icon: "🧪",
-    badge: "border-rose-200 bg-rose-50 text-rose-700",
-  },
-  Биология: {
-    icon: "🧬",
-    badge: "border-green-200 bg-green-50 text-green-700",
-  },
-  История: {
-    icon: "🏛️",
-    badge: "border-amber-200 bg-amber-50 text-amber-800",
-  },
-  Английский: {
-    icon: "🇬🇧",
-    badge: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  },
-  Литература: {
-    icon: "📚",
-    badge: "border-orange-200 bg-orange-50 text-orange-700",
-  },
-  География: {
-    icon: "🌍",
-    badge: "border-cyan-200 bg-cyan-50 text-cyan-700",
-  },
-  Общее: {
-    icon: "✨",
-    badge: "border-slate-200 bg-slate-100 text-slate-700",
-  },
-}
-
-// Извлекает ID видео из любой ссылки YouTube (watch?v=, youtu.be/, embed/, shorts/)
 export function extractYouTubeId(url) {
   if (!url) return null
   const clean = url.trim().replace(/[),.;]+$/, "")
@@ -58,7 +14,6 @@ export function extractYouTubeId(url) {
   return match ? match[1] : null
 }
 
-// Рендерит одну строку текста с поддержкой [Названия](url), обычных ссылок (Wikipedia и др.) и встроенного YouTube
 function renderRichContent(text) {
   if (!text) return null
 
@@ -67,7 +22,6 @@ function renderRichContent(text) {
   return lines.map((line, lineIndex) => {
     const trimmed = line.trim()
 
-    // 1. Если вся строка — это ссылка на YouTube или Markdown-ссылка на YouTube -> рендерим плеер как в Notion
     const directYtId = extractYouTubeId(trimmed)
     const mdSingleMatch = trimmed.match(
       /^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/
@@ -95,18 +49,14 @@ function renderRichContent(text) {
       )
     }
 
-    // 2. Ищем внутри строки также любые ссылки (Markdown `[Текст](url)` или обычные `https://...`)
     const tokenRegex =
       /(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s]+)/g
     const parts = line.split(tokenRegex)
-
-    // Если внутри строки встретилась ссылка на YouTube, покажем плеер сразу под абзацем
     const inlineYoutubeIds = []
 
     const renderedParts = parts.map((part, partIndex) => {
       if (!part) return null
 
-      // Проверка на Markdown ссылку: [Название](https://...)
       const mdMatch = part.match(
         /^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/
       )
@@ -154,7 +104,6 @@ function renderRichContent(text) {
         )
       }
 
-      // Проверка на обычную ссылку: https://...
       if (/^https?:\/\/[^\s]+$/.test(part)) {
         const cleanUrl = part.replace(/[),.;]+$/, "")
         const ytId = extractYouTubeId(cleanUrl)
@@ -166,7 +115,7 @@ function renderRichContent(text) {
               key={partIndex}
               className="mx-1 inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-600"
             >
-              🎬 YouTube Видео
+              🎬 YouTube
             </span>
           )
         }
@@ -256,16 +205,16 @@ function renderRichContent(text) {
 }
 
 export default function PostCard({ post, deletePost, user }) {
+  const { t, getSubjectLabel, getSubjectMeta } = useLanguage()
+
   const [liked, setLiked] = useState(false)
   const [likes, setLikes] = useState(0)
   const [showComments, setShowComments] = useState(false)
   const [openedSections, setOpenedSections] = useState({})
 
-  const subjectName =
-    (post.subject && SUBJECTS[post.subject] && post.subject) ||
-    (post.content && SUBJECTS[post.content] && post.content) ||
-    "Общее"
-  const subjectMeta = SUBJECTS[subjectName] || SUBJECTS["Общее"]
+  const rawSubject = post.subject || post.content
+  const subjectLabel = getSubjectLabel(rawSubject)
+  const subjectMeta = getSubjectMeta(rawSubject)
 
   useEffect(() => {
     fetchLikes()
@@ -375,7 +324,6 @@ export default function PostCard({ post, deletePost, user }) {
       />
 
       <div className="relative z-10">
-        {/* HEADER */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             <motion.div
@@ -428,12 +376,12 @@ export default function PostCard({ post, deletePost, user }) {
                   hover:text-yellow-600
                 "
               >
-                {post.profiles?.username || "Unknown User"}
+                {post.profiles?.username || t.unknownUser}
               </Link>
 
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span>
-                  {post.profiles?.role || "Unknown Role"}
+                  {post.profiles?.role || t.unknownRole}
                 </span>
 
                 <span>•</span>
@@ -450,7 +398,7 @@ export default function PostCard({ post, deletePost, user }) {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* ЗНАЧОК УРОКА (ПРЕДМЕТА) */}
+            {/* ЗНАЧОК УРОКА НА ТЕКУЩЕМ ЯЗЫКЕ */}
             <div
               className={`
                 inline-flex
@@ -466,7 +414,7 @@ export default function PostCard({ post, deletePost, user }) {
               `}
             >
               <span>{subjectMeta.icon}</span>
-              <span>{subjectName}</span>
+              <span>{subjectLabel}</span>
             </div>
 
             {user?.id === post.user_id && (
@@ -485,13 +433,12 @@ export default function PostCard({ post, deletePost, user }) {
                   hover:text-red-500
                 "
               >
-                Delete
+                {t.deleteBtn}
               </button>
             )}
           </div>
         </div>
 
-        {/* CONTENT */}
         <div className="mt-7">
           <h2
             className="
@@ -505,7 +452,6 @@ export default function PostCard({ post, deletePost, user }) {
             {post.title}
           </h2>
 
-          {/* POST IMAGE */}
           {post.image_url && (
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
@@ -537,7 +483,6 @@ export default function PostCard({ post, deletePost, user }) {
             </motion.div>
           )}
 
-          {/* SECTIONS */}
           {(post.post_sections || [])
             .slice()
             .sort((a, b) => a.order_index - b.order_index)
@@ -569,7 +514,7 @@ export default function PostCard({ post, deletePost, user }) {
                   "
                 >
                   <span className="font-bold text-slate-900">
-                    {section.title || `Section ${index + 1}`}
+                    {section.title || t.sectionDefault(index + 1)}
                   </span>
 
                   <span
@@ -632,7 +577,6 @@ export default function PostCard({ post, deletePost, user }) {
             ))}
         </div>
 
-        {/* ACTIONS */}
         <div
           className="
             mt-7
@@ -696,7 +640,7 @@ export default function PostCard({ post, deletePost, user }) {
               active:scale-95
             "
           >
-            💬 Comment
+            {t.commentBtn}
           </button>
 
           <button
@@ -714,11 +658,10 @@ export default function PostCard({ post, deletePost, user }) {
               active:scale-95
             "
           >
-            🔖 Save
+            {t.saveBtn}
           </button>
         </div>
 
-        {/* COMMENTS */}
         {showComments && (
           <CommentSection postId={post.id} user={user} />
         )}

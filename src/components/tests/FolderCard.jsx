@@ -1,9 +1,9 @@
 import { motion } from "framer-motion"
+import { useLanguage } from "../../LanguageContext"
 
-export default function FolderCard({
-  folder,
-  open,
-}) {
+export default function FolderCard({ folder, open }) {
+  const { t } = useLanguage()
+
   return (
     <motion.div
       whileHover={{
@@ -54,7 +54,7 @@ export default function FolderCard({
       </h2>
 
       <p className="mt-2 text-sm text-slate-500">
-        Open folder
+        {t.openFolder}
       </p>
     </motion.div>
   )

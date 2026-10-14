@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from "react"
 import { supabase } from "../supabase"
-import PostCard, {
-  SUBJECTS,
-  extractYouTubeId,
-} from "../components/PostCard"
+import PostCard, { extractYouTubeId } from "../components/PostCard"
 import { motion, AnimatePresence } from "framer-motion"
+import {
+  useLanguage,
+  SUBJECT_KEYS,
+  normalizeSubjectKey,
+} from "../LanguageContext"
 
 export default function Feed() {
+  const { lang, t, getSubjectLabel } = useLanguage()
+
   const [profile, setProfile] = useState(null)
   const [posts, setPosts] = useState([])
   const [title, setTitle] = useState("")
-  const [subject, setSubject] = useState("Общее")
+  const [subjectKey, setSubjectKey] = useState("general")
 
   const [sections, setSections] = useState([
     {
@@ -24,19 +28,17 @@ export default function Feed() {
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState("")
 
-  // Состояния для вставки ссылок и видео в конкретную секцию
   const [activeTool, setActiveTool] = useState({
     index: null,
-    type: null, // "link" | "youtube"
+    type: null,
   })
   const [linkTitle, setLinkTitle] = useState("")
   const [linkUrl, setLinkUrl] = useState("")
   const [videoUrl, setVideoUrl] = useState("")
 
-  // Поиск, фильтр по урокам и сортировка
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedSubject, setSelectedSubject] = useState("Все")
-  const [sortBy, setSortBy] = useState("newest") // "newest" | "oldest" | "subject"
+  const [selectedSubject, setSelectedSubject] = useState("all")
+  const [sortBy, setSortBy] = useState("newest")
 
   async function fetchPosts() {
     const { data, error } = await supabase
@@ -134,15 +136,14 @@ export default function Feed() {
       imageUrl = data.publicUrl
     }
 
-    // Пробуем сохранить с колонкой subject; если SQL еще не выполнен — сохраняем предмет в content как фоллбэк
     let post = null
     const { data: postWithSubject, error: subjectError } =
       await supabase
         .from("posts")
         .insert({
           title,
-          subject,
-          content: subject,
+          subject: subjectKey,
+          content: subjectKey,
           user_email: user.email,
           user_id: user.id,
           image_url: imageUrl,
@@ -156,7 +157,7 @@ export default function Feed() {
           .from("posts")
           .insert({
             title,
-            content: subject,
+            content: subjectKey,
             user_email: user.email,
             user_id: user.id,
             image_url: imageUrl,
@@ -191,9 +192,8 @@ export default function Feed() {
       return
     }
 
-    // Сброс формы
     setTitle("")
-    setSubject("Общее")
+    setSubjectKey("general")
     setSections([
       {
         title: "",
@@ -261,7 +261,7 @@ export default function Feed() {
 
     const ytId = extractYouTubeId(videoUrl.trim())
     if (!ytId) {
-      alert("Пожалуйста, вставьте корректную ссылку на YouTube видео")
+      alert(t.invalidYoutubeAlert)
       return
     }
 
@@ -286,28 +286,21 @@ export default function Feed() {
     fetchUser()
   }, [])
 
-  // Определяем предмет поста (из колонки subject или фоллбэка content)
-  function getPostSubject(post) {
-    if (post.subject && SUBJECTS[post.subject]) {
-      return post.subject
-    }
-    if (post.content && SUBJECTS[post.content]) {
-      return post.content
-    }
-    return "Общее"
+  function getPostSubjectKey(post) {
+    return normalizeSubjectKey(post.subject || post.content)
   }
 
-  // Фильтрация и сортировка постов
   const filteredPosts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
 
     return posts
       .filter((post) => {
-        const postSubj = getPostSubject(post)
+        const postSubjKey = getPostSubjectKey(post)
+        const subjMeta = SUBJECT_KEYS[postSubjKey]
 
         if (
-          selectedSubject !== "Все" &&
-          postSubj !== selectedSubject
+          selectedSubject !== "all" &&
+          postSubjKey !== selectedSubject
         ) {
           return false
         }
@@ -317,7 +310,10 @@ export default function Feed() {
         const inTitle = (post.title || "")
           .toLowerCase()
           .includes(query)
-        const inSubject = postSubj
+        const inSubjectRu = (subjMeta?.ru || "")
+          .toLowerCase()
+          .includes(query)
+        const inSubjectEn = (subjMeta?.en || "")
           .toLowerCase()
           .includes(query)
         const inAuthor = (post.profiles?.username || "")
@@ -329,7 +325,13 @@ export default function Feed() {
             (sec.content || "").toLowerCase().includes(query)
         )
 
-        return inTitle || inSubject || inAuthor || inSections
+        return (
+          inTitle ||
+          inSubjectRu ||
+          inSubjectEn ||
+          inAuthor ||
+          inSections
+        )
       })
       .sort((a, b) => {
         if (sortBy === "oldest") {
@@ -338,20 +340,22 @@ export default function Feed() {
           )
         }
         if (sortBy === "subject") {
-          return getPostSubject(a).localeCompare(
-            getPostSubject(b),
-            "ru"
+          const labelA = getSubjectLabel(
+            getPostSubjectKey(a)
           )
+          const labelB = getSubjectLabel(
+            getPostSubjectKey(b)
+          )
+          return labelA.localeCompare(labelB, lang)
         }
         return (
           new Date(b.created_at) - new Date(a.created_at)
         )
       })
-  }, [posts, searchQuery, selectedSubject, sortBy])
+  }, [posts, searchQuery, selectedSubject, sortBy, lang])
 
   return (
     <>
-      {/* WELCOME HEADER */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -383,7 +387,7 @@ export default function Feed() {
         />
 
         <p className="text-yellow-600 uppercase tracking-[0.28em] text-sm font-bold">
-          Welcome Back
+          {t.welcomeBack}
         </p>
 
         <h1 className="mt-2 text-4xl md:text-5xl font-black tracking-tight text-slate-950">
@@ -391,13 +395,13 @@ export default function Feed() {
         </h1>
 
         <p className="mt-2 max-w-2xl text-base md:text-lg leading-7 text-slate-500">
-          Inspire students. Share knowledge. Build the future.
+          {t.heroSubtitle}
         </p>
 
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
           <div className="rounded-2xl bg-white px-6 py-5 border border-slate-200">
             <p className="text-slate-500 text-sm font-medium">
-              Posts
+              {t.postsCount}
             </p>
 
             <h2 className="mt-1 text-3xl font-black text-slate-950">
@@ -407,7 +411,7 @@ export default function Feed() {
 
           <div className="rounded-2xl bg-white px-6 py-5 border border-slate-200">
             <p className="text-slate-500 text-sm font-medium">
-              Level
+              {t.level}
             </p>
 
             <h2 className="mt-1 text-3xl font-black text-slate-950">
@@ -417,7 +421,7 @@ export default function Feed() {
 
           <div className="rounded-2xl bg-yellow-50 px-6 py-5 border border-yellow-200">
             <p className="text-slate-500 text-sm font-medium">
-              XP
+              {t.xp}
             </p>
 
             <h2 className="mt-1 text-3xl font-black text-slate-950">
@@ -427,7 +431,6 @@ export default function Feed() {
         </div>
       </motion.div>
 
-      {/* CREATE POST CARD */}
       <div
         className="
           relative
@@ -488,33 +491,33 @@ export default function Feed() {
         >
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-yellow-600 font-bold">
-              Community
+              {t.community}
             </p>
 
             <h2 className="mt-2 text-2xl md:text-3xl font-black tracking-tight text-slate-950">
-              Create a new post
+              {t.createNewPost}
             </h2>
           </div>
 
           <div className="rounded-full border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-700">
-            Public
+            {t.publicBadge}
           </div>
         </div>
 
-        {/* ВЫБОР УРОКА / ПРЕДМЕТА */}
+        {/* ВЫБОР ПРЕДМЕТА */}
         <div className="relative z-10 mb-6">
           <p className="mb-3 text-sm font-bold text-slate-700">
-            Выберите предмет (урок):
+            {t.chooseSubject}
           </p>
 
           <div className="flex flex-wrap gap-2">
-            {Object.entries(SUBJECTS).map(([name, meta]) => {
-              const active = subject === name
+            {Object.entries(SUBJECT_KEYS).map(([key, meta]) => {
+              const active = subjectKey === key
               return (
                 <button
-                  key={name}
+                  key={key}
                   type="button"
-                  onClick={() => setSubject(name)}
+                  onClick={() => setSubjectKey(key)}
                   className={`
                     flex
                     items-center
@@ -535,7 +538,7 @@ export default function Feed() {
                   `}
                 >
                   <span>{meta.icon}</span>
-                  <span>{name}</span>
+                  <span>{meta[lang]}</span>
                 </button>
               )
             })}
@@ -545,7 +548,7 @@ export default function Feed() {
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Post title..."
+          placeholder={t.postTitlePlaceholder}
           className="
             w-full
             rounded-2xl
@@ -570,10 +573,8 @@ export default function Feed() {
           "
         />
 
-        {/* СЕКЦИИ ПОСТА */}
         <div className="mt-5 space-y-4">
           {sections.map((section, index) => {
-            // Находим все YouTube видео, которые уже вставлены в текст этой секции, для живого превью
             const youtubeIds = [
               ...new Set(
                 (section.content || "")
@@ -606,7 +607,9 @@ export default function Feed() {
                       copy[index].title = e.target.value
                       setSections(copy)
                     }}
-                    placeholder={`Section ${index + 1} title`}
+                    placeholder={t.sectionTitlePlaceholder(
+                      index + 1
+                    )}
                     className="
                       w-full
                       bg-transparent
@@ -635,7 +638,7 @@ export default function Feed() {
                         hover:text-red-500
                       "
                     >
-                      ✕ Удалить
+                      ✕ {t.deleteBtn}
                     </button>
                   )}
                 </div>
@@ -648,7 +651,7 @@ export default function Feed() {
                     setSections(copy)
                   }}
                   rows={5}
-                  placeholder="Пишите текст урока... Вы можете вставить ссылку на Wikipedia или YouTube прямо сюда или использовать кнопки ниже"
+                  placeholder={t.sectionContentPlaceholder}
                   className="
                     w-full
                     resize-none
@@ -672,7 +675,6 @@ export default function Feed() {
                   "
                 />
 
-                {/* ПАНЕЛЬ ВСТАВКИ ССЫЛКИ И YOUTUBE (КАК В NOTION) */}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -705,7 +707,7 @@ export default function Feed() {
                       hover:bg-yellow-50
                     "
                   >
-                    🔗 Добавить ссылку (Wikipedia и др.)
+                    {t.addLinkBtn}
                   </button>
 
                   <button
@@ -737,16 +739,15 @@ export default function Feed() {
                       hover:bg-red-100
                     "
                   >
-                    🎬 Вставить YouTube видео
+                    {t.addYoutubeBtn}
                   </button>
                 </div>
 
-                {/* ФОРМА ДОБАВЛЕНИЯ ССЫЛКИ */}
                 {activeTool.index === index &&
                   activeTool.type === "link" && (
                     <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Вставка ссылки в текст
+                        {t.insertLinkHeader}
                       </p>
 
                       <div className="grid gap-2 sm:grid-cols-2">
@@ -755,7 +756,7 @@ export default function Feed() {
                           onChange={(e) =>
                             setLinkTitle(e.target.value)
                           }
-                          placeholder="Название (напр. Википедия: Пифагор)"
+                          placeholder={t.linkTitlePlaceholder}
                           className="
                             rounded-xl
                             border
@@ -776,7 +777,7 @@ export default function Feed() {
                           onChange={(e) =>
                             setLinkUrl(e.target.value)
                           }
-                          placeholder="https://ru.wikipedia.org/..."
+                          placeholder={t.linkUrlPlaceholder}
                           className="
                             rounded-xl
                             border
@@ -804,7 +805,7 @@ export default function Feed() {
                           }
                           className="rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100"
                         >
-                          Отмена
+                          {t.cancel}
                         </button>
 
                         <button
@@ -814,18 +815,17 @@ export default function Feed() {
                           }
                           className="rounded-xl bg-yellow-400 px-4 py-1.5 text-xs font-bold text-slate-950 hover:bg-yellow-300"
                         >
-                          Вставить ссылку
+                          {t.insertLinkSubmit}
                         </button>
                       </div>
                     </div>
                   )}
 
-                {/* ФОРМА ВСТАВКИ YOUTUBE ВИДЕО */}
                 {activeTool.index === index &&
                   activeTool.type === "youtube" && (
                     <div className="mt-3 rounded-2xl border border-red-200 bg-white p-4 shadow-sm">
                       <p className="mb-2 text-xs font-bold uppercase tracking-wider text-red-500">
-                        YouTube плеер прямо в тексте (как в Notion)
+                        {t.youtubeHeader}
                       </p>
 
                       <div className="flex flex-col gap-2 sm:flex-row">
@@ -834,7 +834,7 @@ export default function Feed() {
                           onChange={(e) =>
                             setVideoUrl(e.target.value)
                           }
-                          placeholder="Вставьте ссылку: https://www.youtube.com/watch?v=..."
+                          placeholder={t.youtubePlaceholder}
                           className="
                             flex-1
                             rounded-xl
@@ -858,17 +858,16 @@ export default function Feed() {
                           }
                           className="rounded-xl bg-red-500 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-red-600"
                         >
-                          Встроить видео
+                          {t.embedVideoSubmit}
                         </button>
                       </div>
                     </div>
                   )}
 
-                {/* ЖИВОЕ ПРЕВЬЮ YOUTUBE В РЕДАКТОРЕ */}
                 {youtubeIds.length > 0 && (
                   <div className="mt-4 space-y-3">
                     <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                      Предпросмотр встроенного видео:
+                      {t.videoPreviewLabel}
                     </p>
                     {youtubeIds.map((ytId) => (
                       <div
@@ -891,7 +890,6 @@ export default function Feed() {
           })}
         </div>
 
-        {/* IMAGE */}
         <div className="mt-6">
           <label
             className="
@@ -912,7 +910,7 @@ export default function Feed() {
               hover:bg-yellow-100
             "
           >
-            📷 Add photo
+            {t.addPhoto}
 
             <input
               type="file"
@@ -959,7 +957,7 @@ export default function Feed() {
                   hover:bg-black/90
                 "
               >
-                Remove
+                {t.removePhoto}
               </button>
             </div>
           )}
@@ -991,7 +989,7 @@ export default function Feed() {
               hover:bg-yellow-100
             "
           >
-            + Add section
+            {t.addSection}
           </button>
 
           <motion.button
@@ -1014,12 +1012,12 @@ export default function Feed() {
               disabled:cursor-not-allowed
             "
           >
-            Publish
+            {t.publish}
           </motion.button>
         </div>
       </div>
 
-      {/* ПАНЕЛЬ ПОИСКА И ФИЛЬТРАЦИИ ПО УРОКАМ */}
+      {/* ПОИСК И ФИЛЬТРЫ */}
       <div
         className="
           mb-6
@@ -1032,7 +1030,6 @@ export default function Feed() {
         "
       >
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
-          {/* Строка поиска */}
           <div className="relative flex-1">
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg">
               🔎
@@ -1041,7 +1038,7 @@ export default function Feed() {
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по постам, темам, тексту или автору..."
+              placeholder={t.searchPostsPlaceholder}
               className="
                 w-full
                 rounded-2xl
@@ -1088,10 +1085,9 @@ export default function Feed() {
             )}
           </div>
 
-          {/* Сортировка */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Сортировка:
+              {t.sortByLabel}
             </span>
 
             <select
@@ -1113,18 +1109,17 @@ export default function Feed() {
                 focus:bg-white
               "
             >
-              <option value="newest">Сначала новые</option>
-              <option value="oldest">Сначала старые</option>
-              <option value="subject">По предметам (А–Я)</option>
+              <option value="newest">{t.sortNewest}</option>
+              <option value="oldest">{t.sortOldest}</option>
+              <option value="subject">{t.sortSubject}</option>
             </select>
           </div>
         </div>
 
-        {/* Фильтр по урокам (предметам) */}
         <div className="mt-5 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setSelectedSubject("Все")}
+            onClick={() => setSelectedSubject("all")}
             className={`
               rounded-xl
               border
@@ -1134,26 +1129,26 @@ export default function Feed() {
               font-bold
               transition
               ${
-                selectedSubject === "Все"
+                selectedSubject === "all"
                   ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                   : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
               }
             `}
           >
-            Все уроки ({posts.length})
+            {t.allSubjects} ({posts.length})
           </button>
 
-          {Object.entries(SUBJECTS).map(([name, meta]) => {
+          {Object.entries(SUBJECT_KEYS).map(([key, meta]) => {
             const count = posts.filter(
-              (p) => getPostSubject(p) === name
+              (p) => getPostSubjectKey(p) === key
             ).length
-            const active = selectedSubject === name
+            const active = selectedSubject === key
 
             return (
               <button
-                key={name}
+                key={key}
                 type="button"
-                onClick={() => setSelectedSubject(name)}
+                onClick={() => setSelectedSubject(key)}
                 className={`
                   flex
                   items-center
@@ -1173,7 +1168,7 @@ export default function Feed() {
                 `}
               >
                 <span>{meta.icon}</span>
-                <span>{name}</span>
+                <span>{meta[lang]}</span>
                 {count > 0 && (
                   <span
                     className={`
@@ -1198,27 +1193,26 @@ export default function Feed() {
         </div>
       </div>
 
-      {/* СПИСОК ПОСТОВ */}
       <motion.div layout className="mt-5 space-y-4 pb-20">
         {filteredPosts.length === 0 ? (
           <div className="rounded-[28px] border border-slate-200 bg-white p-12 text-center shadow-sm">
             <div className="text-5xl">🔍</div>
             <h3 className="mt-4 text-xl font-black text-slate-900">
-              Посты не найдены
+              {t.noPostsFound}
             </h3>
             <p className="mt-2 text-sm text-slate-500">
-              Попробуйте изменить поисковый запрос или выбрать другой предмет.
+              {t.noPostsHint}
             </p>
-            {(searchQuery || selectedSubject !== "Все") && (
+            {(searchQuery || selectedSubject !== "all") && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery("")
-                  setSelectedSubject("Все")
+                  setSelectedSubject("all")
                 }}
                 className="mt-5 rounded-xl bg-yellow-400 px-5 py-2.5 text-sm font-bold text-slate-950 hover:bg-yellow-300"
               >
-                Сбросить фильтры
+                {t.resetFilters}
               </button>
             )}
           </div>

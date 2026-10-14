@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { supabase } from "../supabase"
+import { useLanguage } from "../LanguageContext"
 
-export default function CommentSection({
-  postId,
-  user,
-}) {
+export default function CommentSection({ postId, user }) {
+  const { t } = useLanguage()
+
   const [comments, setComments] = useState([])
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
@@ -60,11 +60,7 @@ export default function CommentSection({
   }
 
   async function removeComment(id) {
-    await supabase
-      .from("comments")
-      .delete()
-      .eq("id", id)
-
+    await supabase.from("comments").delete().eq("id", id)
     loadComments()
   }
 
@@ -82,29 +78,28 @@ export default function CommentSection({
         shadow-[0_12px_35px_rgba(15,23,42,0.08)]
       "
     >
-
-      {/* Comments */}
       <div className="max-h-[300px] overflow-y-auto p-4 space-y-3">
-
         {comments.length === 0 && (
-          <div className="
-            rounded-xl
-            border
-            border-dashed
-            border-slate-200
-            bg-slate-50
-            px-5
-            py-8
-            text-center
-          ">
+          <div
+            className="
+              rounded-xl
+              border
+              border-dashed
+              border-slate-200
+              bg-slate-50
+              px-5
+              py-8
+              text-center
+            "
+          >
             <div className="text-2xl">💬</div>
 
             <p className="mt-2 font-semibold text-slate-600">
-              No comments yet
+              {t.noCommentsYet}
             </p>
 
             <p className="mt-1 text-sm text-slate-400">
-              Be the first to share your thoughts.
+              {t.beFirstComment}
             </p>
           </div>
         )}
@@ -126,11 +121,8 @@ export default function CommentSection({
               hover:bg-yellow-50/40
             "
           >
-
             <div className="flex items-center justify-between">
-
               <div className="flex items-center gap-3">
-
                 {comment.profiles?.avatar_url ? (
                   <img
                     src={comment.profiles.avatar_url}
@@ -146,32 +138,33 @@ export default function CommentSection({
                     "
                   />
                 ) : (
-                  <div className="
-                    flex
-                    h-10
-                    w-10
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-yellow-100
-                    text-lg
-                    ring-2
-                    ring-white
-                  ">
+                  <div
+                    className="
+                      flex
+                      h-10
+                      w-10
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-yellow-100
+                      text-lg
+                      ring-2
+                      ring-white
+                    "
+                  >
                     👤
                   </div>
                 )}
 
                 <div>
                   <p className="font-bold text-slate-800">
-                    {comment.profiles?.username || "Unknown"}
+                    {comment.profiles?.username || t.unknownUser}
                   </p>
 
                   <p className="text-xs text-slate-400">
                     {new Date(comment.created_at).toLocaleString()}
                   </p>
                 </div>
-
               </div>
 
               {user?.id === comment.user_id && (
@@ -187,41 +180,33 @@ export default function CommentSection({
                     hover:bg-red-50
                     hover:text-red-500
                   "
-                  title="Delete comment"
+                  title={t.deleteBtn}
                 >
                   🗑️
                 </button>
               )}
-
             </div>
 
-            <p className="
-              mt-3
-              whitespace-pre-wrap
-              leading-6
-              text-slate-600
-            ">
+            <p
+              className="
+                mt-3
+                whitespace-pre-wrap
+                leading-6
+                text-slate-600
+              "
+            >
               {comment.content}
             </p>
-
           </motion.div>
         ))}
-
       </div>
 
-      {/* Write comment */}
-      <div className="
-        border-t
-        border-slate-200
-        bg-slate-50/70
-        p-4
-      ">
-
+      <div className="border-t border-slate-200 bg-slate-50/70 p-4">
         <textarea
           rows={3}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Write a comment..."
+          placeholder={t.writeCommentPlaceholder}
           className="
             w-full
             resize-none
@@ -269,11 +254,9 @@ export default function CommentSection({
             disabled:opacity-60
           "
         >
-          {sending ? "Sending..." : "Send Comment"}
+          {sending ? t.sending : t.sendComment}
         </motion.button>
-
       </div>
-
     </motion.div>
   )
 }

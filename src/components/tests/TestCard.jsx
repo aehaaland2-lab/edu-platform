@@ -1,8 +1,10 @@
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
+import { useLanguage } from "../../LanguageContext"
 
 export default function TestCard({ test, profile }) {
   const navigate = useNavigate()
+  const { t } = useLanguage()
 
   return (
     <motion.div
@@ -60,12 +62,12 @@ export default function TestCard({ test, profile }) {
       </h2>
 
       <p className="mt-3 text-slate-500">
-        {test.description || "No description"}
+        {test.description || t.noDescription}
       </p>
 
       <div className="mt-6 flex gap-3 text-sm">
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">
-          ⏱ {test.time_limit} min
+          ⏱ {test.time_limit} {t.minShort}
         </div>
 
         <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 font-semibold text-yellow-700">
