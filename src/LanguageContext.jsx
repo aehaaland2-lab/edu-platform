@@ -1,8 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react"
 
-const LanguageContext = createContext()
-
-// Единый справочник уроков с ключами и переводами на RU и EN
 export const SUBJECT_KEYS = {
   algebra: {
     icon: "➗",
@@ -72,7 +69,6 @@ export const SUBJECT_KEYS = {
   },
 }
 
-// Распознает предмет поста (даже если он был сохранен по-русски или по-английски ранее)
 export function normalizeSubjectKey(raw) {
   if (!raw) return "general"
   const clean = raw.trim().toLowerCase()
@@ -92,7 +88,6 @@ export function normalizeSubjectKey(raw) {
 
 const translations = {
   ru: {
-    // Layout & Navigation
     tagline: "Учись. Расти. Лидируй.",
     signedInAs: "Вы вошли как",
     navFeed: "Лента",
@@ -101,9 +96,8 @@ const translations = {
     navMessages: "Сообщения",
     navProfile: "Профиль",
     logout: "Выйти",
-    langLabel: "Язык окружения",
+    langLabel: "Язык",
 
-    // Feed
     welcomeBack: "С возвращением",
     heroSubtitle: "Вдохновляйте учеников. Делитесь знаниями. Создавайте будущее.",
     postsCount: "Постов",
@@ -118,7 +112,7 @@ const translations = {
     sectionContentPlaceholder:
       "Пишите текст урока... Вы можете вставить ссылку на Wikipedia или YouTube прямо сюда или использовать кнопки ниже",
     deleteBtn: "Удалить",
-    addLinkBtn: "🔗 Добавить ссылку (Wikipedia и др.)",
+    addLinkBtn: "🔗 Добавить ссылку",
     addYoutubeBtn: "🎬 Вставить YouTube видео",
     insertLinkHeader: "Вставка ссылки в текст",
     linkTitlePlaceholder: "Название (напр. Википедия: Теорема Виета)",
@@ -144,7 +138,6 @@ const translations = {
     noPostsHint: "Попробуйте изменить поисковый запрос или выбрать другой предмет.",
     resetFilters: "Сбросить фильтры",
 
-    // PostCard & Comments
     unknownUser: "Неизвестный пользователь",
     unknownRole: "Роль не указана",
     sectionDefault: (i) => `Секция ${i}`,
@@ -156,7 +149,6 @@ const translations = {
     sending: "Отправка...",
     sendComment: "Отправить комментарий",
 
-    // Tests
     testsTitle: "Тесты",
     testsSubtitle: "Просматривайте папки и проходите тесты по предметам.",
     backBtn: "← Назад",
@@ -172,7 +164,6 @@ const translations = {
     noDescription: "Без описания",
     minShort: "мин",
 
-    // Leaderboard
     leaderboardTitle: "Таблица лидеров",
     leaderboardSubtitle: "Лучшие ученики по количеству XP.",
     searchStudentsPlaceholder: "Поиск учеников...",
@@ -182,7 +173,6 @@ const translations = {
     secondPlace: "2 место",
     thirdPlace: "3 место",
 
-    // Messages
     messagesTitle: "Сообщения",
     messagesSubtitle: "Общайтесь со всеми участниками сообщества EDU.",
     mentionsReplies: "Упоминания и ответы",
@@ -202,7 +192,6 @@ const translations = {
     sendBtn: "Отправить",
     chatFooterHint: "Enter — отправить · Shift + Enter — новая строка · @username — упомянуть",
 
-    // Profile
     loadingProfile: "Загрузка профиля...",
     editProfileBtn: "Редактировать профиль",
     completedTests: "Пройдено тестов",
@@ -226,7 +215,6 @@ const translations = {
   },
 
   en: {
-    // Layout & Navigation
     tagline: "Learn. Grow. Lead.",
     signedInAs: "Signed in as",
     navFeed: "Feed",
@@ -237,7 +225,6 @@ const translations = {
     logout: "Log out",
     langLabel: "Language",
 
-    // Feed
     welcomeBack: "Welcome Back",
     heroSubtitle: "Inspire students. Share knowledge. Build the future.",
     postsCount: "Posts",
@@ -252,7 +239,7 @@ const translations = {
     sectionContentPlaceholder:
       "Write lesson content... Paste any Wikipedia or YouTube link directly here or use the buttons below",
     deleteBtn: "Delete",
-    addLinkBtn: "🔗 Add link (Wikipedia, etc.)",
+    addLinkBtn: "🔗 Add link",
     addYoutubeBtn: "🎬 Embed YouTube video",
     insertLinkHeader: "Insert link into text",
     linkTitlePlaceholder: "Title (e.g. Wikipedia: Quadratic Formula)",
@@ -278,7 +265,6 @@ const translations = {
     noPostsHint: "Try changing your search query or selecting another subject.",
     resetFilters: "Reset filters",
 
-    // PostCard & Comments
     unknownUser: "Unknown User",
     unknownRole: "Unknown Role",
     sectionDefault: (i) => `Section ${i}`,
@@ -290,7 +276,6 @@ const translations = {
     sending: "Sending...",
     sendComment: "Send Comment",
 
-    // Tests
     testsTitle: "Tests",
     testsSubtitle: "Browse folders and take subject tests.",
     backBtn: "← Back",
@@ -306,11 +291,95 @@ const translations = {
     noDescription: "No description",
     minShort: "min",
 
-    // Leaderboard
     leaderboardTitle: "Leaderboard",
     leaderboardSubtitle: "Top students ranked by XP.",
     searchStudentsPlaceholder: "Search students...",
     loadingLeaderboard: "Loading leaderboard...",
     noStudentsFound: "No students found.",
     topStudent: "Top student",
-    secondPlace: "
+    secondPlace: "Second place",
+    thirdPlace: "Third place",
+
+    messagesTitle: "Messages",
+    messagesSubtitle: "Talk with everyone in the EDU community.",
+    mentionsReplies: "Mentions & Replies",
+    peopleReachedOut: "People who reached out to you",
+    noMentions: "No mentions or replies",
+    allCaughtUp: "You are all caught up.",
+    mentionedYou: "Mentioned you",
+    repliedToYou: "Replied to you",
+    noMessagesYet: "No messages yet",
+    beFirstMessage: "Be the first one to say something.",
+    replyingTo: "Replying to",
+    replyBtn: "Reply",
+    mentionSomeone: "Mention someone",
+    mentionThisUser: "Mention this user",
+    writeReplyPlaceholder: "Write a reply...",
+    writeMessagePlaceholder: "Write a message... Use @username to mention someone",
+    sendBtn: "Send",
+    chatFooterHint: "Enter to send · Shift + Enter for a new line · @username to mention",
+
+    loadingProfile: "Loading profile...",
+    editProfileBtn: "Edit Profile",
+    completedTests: "Completed Tests",
+    bestScore: "Best Score",
+    createdTests: "Created Tests",
+    totalAttempts: "Total Attempts",
+    averageScore: "Average Score",
+    studentsCount: "Students",
+    totalXpGiven: "Total XP Given",
+    avgStudentScore: "Average Student Score",
+    progressLabel: "Progress",
+    recentTests: "Recent Tests",
+    completedCount: "completed",
+    noTestsCompleted: "No tests completed",
+    noTestsCompletedDesc: "Complete your first test to see your results here.",
+    testItemTitle: "Test",
+    teacherLabel: "Teacher",
+    publishedPosts: "Posts",
+    noPostsYet: "No posts yet",
+    noPostsYetDesc: "Published posts will appear here.",
+  },
+}
+
+const LanguageContext = createContext()
+
+export function LanguageProvider({ children }) {
+  const [lang, setLang] = useState(() => {
+    return localStorage.getItem("edu_lang") || "ru"
+  })
+
+  useEffect(() => {
+    localStorage.setItem("edu_lang", lang)
+  }, [lang])
+
+  const t = translations[lang] || translations.ru
+
+  function getSubjectLabel(rawKey) {
+    const key = normalizeSubjectKey(rawKey)
+    return SUBJECT_KEYS[key]?.[lang] || SUBJECT_KEYS.general[lang]
+  }
+
+  function getSubjectMeta(rawKey) {
+    const key = normalizeSubjectKey(rawKey)
+    return SUBJECT_KEYS[key] || SUBJECT_KEYS.general
+  }
+
+  return (
+    <LanguageContext.Provider
+      value={{
+        lang,
+        setLang,
+        t,
+        getSubjectLabel,
+        getSubjectMeta,
+      }}
+    >
+      {children}
+    </LanguageContext.Provider>
+  )
+}
+
+export function useLanguage() {
+  return useContext(LanguageContext)
+}
